@@ -150,6 +150,33 @@ Full docs live in [docs/](docs/). Key guides:
 | [Agent Memory & RAG](docs/agent-memory-rag.md) | Persistent memory and retrieval |
 | [TypeScript Migration](docs/typescript-migration.md) | TypeScript usage guide |
 
+## Project Structure
+
+```
+packages/
+  core/                  → Main SDK (xspace-agent on npm). Agent class, providers,
+                           audio pipeline, browser automation, FSM, intelligence layer.
+  server/                → Admin panel (@xspace/server). Express + Socket.IO with
+                           auth, rate limiting, and real-time agent control.
+  cli/                   → CLI tool (@xspace/cli). Commands: init, auth, join, start, dashboard.
+  widget/                → Embeddable UI widget components (early stage).
+  create-xspace-agent/   → Project scaffolding template (create-xspace-agent).
+
+src/                     → Legacy monolithic server (Express + Socket.IO). Still works
+                           via `npm run dev`. Being migrated into packages/.
+agent-voice-chat/        → Standalone voice chat agent with its own test suite,
+                           OpenAPI spec, memory system, and conversation archiving.
+x-spaces/               → Low-level Puppeteer automation scripts (JavaScript, legacy).
+examples/                → Runnable example projects (basic-join, multi-agent-debate, etc.).
+docs/                    → Architecture docs, API reference, deployment guides.
+docker/                  → Prometheus + Grafana configs for monitoring.
+public/                  → Frontend HTML/CSS/JS for dashboard and agent UIs.
+personalities/           → Pre-built agent personality configurations.
+prompts/                 → Prompt templates for different agent behaviors.
+providers/               → Provider configuration and utilities.
+tests/                   → Integration and end-to-end tests.
+```
+
 ## Examples
 
 | Example | Description |
