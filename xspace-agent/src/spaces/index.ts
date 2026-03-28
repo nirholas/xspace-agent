@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import { EventEmitter } from "node:events";
 import type { Browser, Page } from "puppeteer";
 import { config } from "../config.js";

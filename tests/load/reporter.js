@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 // =============================================================================
 // Custom Artillery Reporter
 // Generates a structured JSON performance report with:

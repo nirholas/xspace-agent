@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import { AgentCommon } from "./core"
 import { initOpenAIRealtime } from "./providers/webrtc"
 import { initSocketProvider } from "./providers/streaming"

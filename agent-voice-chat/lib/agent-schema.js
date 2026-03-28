@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 const { z } = require("zod")
 
 const HEX_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/

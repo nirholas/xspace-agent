@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 // transcript.js — Live transcript with auto-scroll and speaker colors
 
 const SPEAKER_COLORS = [

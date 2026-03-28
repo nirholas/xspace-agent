@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import { describe, it, expect, afterEach, beforeAll, vi } from 'vitest'
 import request from 'supertest'
 import type { XSpaceServer } from '../../src/create-server'

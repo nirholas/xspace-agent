@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { VoiceChatClient } from '@agent-voice-chat/core';
 import type { Message } from '@agent-voice-chat/core';

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 const { nanoid } = require("nanoid")
 const { CircularBuffer } = require("./src/server/utils/circular-buffer")
 const { logger } = require("./src/server/logger")

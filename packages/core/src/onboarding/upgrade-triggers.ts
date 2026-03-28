@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 // =============================================================================
 // Upgrade Triggers — Contextual upgrade prompts based on usage and limits
 // =============================================================================

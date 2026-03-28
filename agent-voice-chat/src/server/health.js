@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 const { logger } = require("./logger")
 const { HEALTH_CHECK_INTERVAL_MS } = require("./constants")
 

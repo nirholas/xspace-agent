@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 /**
  * Generate test fixture WAV files.
  * Run with: npx tsx src/__tests__/fixtures/generate-fixtures.ts

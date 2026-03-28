@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 // =============================================================================
 // Example Plugin: Session Analytics
 // Tracks conversation metrics and logs a summary report on session end.

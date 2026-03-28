@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import { WidgetConnection, ChatMessage, ConnectionState } from './connection'
 import { Theme, ThemeMode, resolveTheme, themeToCSS, watchAutoTheme } from './theme'
 import { VoiceInput } from './audio/voice-input'

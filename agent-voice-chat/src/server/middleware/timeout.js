@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 const { logger } = require("../logger")
 
 const DEFAULT_TIMEOUT_MS = parseInt(process.env.REQUEST_TIMEOUT_MS) || 30_000

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import axios from "axios";
 import { config } from "../../config.js";
 import { createChildLogger } from "../../utils/logger.js";

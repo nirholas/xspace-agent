@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { CICDService } from '../cicd/service'
 import { AgentTestRunner, type TestRunnerProvider } from '../cicd/test-runner'

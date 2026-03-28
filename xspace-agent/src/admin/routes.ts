@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import type { Request, Response, Router } from "express";
 import express from "express";
 import path from "node:path";

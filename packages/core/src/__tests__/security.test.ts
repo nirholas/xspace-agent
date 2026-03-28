@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import { describe, it, expect, afterEach } from 'vitest'
 import { SecureCookieStore } from '../browser/secure-cookie-store'
 import { redactSecrets } from '../logger'

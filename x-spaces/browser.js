@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 // DEPRECATED: Use packages/core/src/browser/ instead.
 // Will be removed in v1.0.
 

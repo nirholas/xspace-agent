@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import type { Provider } from "../types"
 
 export const AI_PROVIDER = (process.env.AI_PROVIDER || "openai").toLowerCase()

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 // Shared agent logic — UI helpers, Socket.IO handlers, audio analysis
 class AgentCommon {
   constructor(config) {

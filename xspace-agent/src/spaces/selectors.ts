@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import type { SelectorChain } from "../types.js";
 
 // X/Twitter Space UI selectors — centralized for easy updates when X changes DOM.

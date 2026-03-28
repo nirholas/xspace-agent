@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 // =============================================================================
 // Enterprise Auth — Main Auth Service
 // Orchestrates registration, login, logout, refresh, password reset

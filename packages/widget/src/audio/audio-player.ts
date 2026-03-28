@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 export class AudioPlayer {
   private audioContext: AudioContext | null = null
   private queue: ArrayBuffer[] = []

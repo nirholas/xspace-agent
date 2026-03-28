@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 'use strict'
 
 const { DEFAULT_RATE_LIMIT_WINDOW_MS, RATE_LIMIT_TIERS } = require("../constants")

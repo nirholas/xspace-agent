@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import { io as ioClient } from "socket.io-client"
 import { describeE2E, createE2EServer, measureLatency } from "./setup.js"

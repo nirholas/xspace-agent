@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 class ConversationHistory {
   constructor({ maxLength = 100 } = {}) {
     this.maxLength = maxLength

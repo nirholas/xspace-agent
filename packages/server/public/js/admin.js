@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 // admin.js — Main application, router, and Socket.IO connection
 
 import { DashboardPage } from './pages/dashboard.js'

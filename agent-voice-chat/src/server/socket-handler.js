@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 const { createSocketRateLimiter } = require("./middleware/rate-limit")
 const { sanitizeMessage, validateAgentId } = require("./middleware/sanitize")
 const { socketAuth } = require("./middleware/auth")

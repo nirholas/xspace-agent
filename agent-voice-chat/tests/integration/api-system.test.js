@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import request from "supertest"
 import { beforeEach, describe, it, expect } from "vitest"
 import createSystemRoutes from "../../src/server/routes/system.js"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createElevenLabsCloningProvider } from '../../../src/voice/cloning-provider'
 import type { AudioSample } from '../../../src/voice/types'

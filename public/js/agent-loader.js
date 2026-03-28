@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 // Dynamic provider loader — fetches config and initializes the right provider
 (async function() {
   // AGENT_CONFIG must be set before this script loads

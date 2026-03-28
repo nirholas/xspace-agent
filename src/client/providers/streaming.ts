@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import type { AgentCommon } from "../core"
 
 export function initSocketProvider(agent: AgentCommon): void {

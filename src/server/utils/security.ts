@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 // ===== Input Validation Helpers =====
 
 /** Valid X Space URL pattern */

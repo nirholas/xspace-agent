@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import fs from "node:fs";
 import { execSync } from "node:child_process";
 import type { Page } from "puppeteer";

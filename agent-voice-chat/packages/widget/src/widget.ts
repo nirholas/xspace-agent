@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import type { WidgetConfig, ResolvedConfig, Message, ThemeOverrides, ConnectionState } from './types';
 import { WidgetContainer } from './ui/container';
 import { FloatingButton } from './ui/button';

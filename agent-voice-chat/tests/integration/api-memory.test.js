@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import request from "supertest"
 import createMemoryRoutes from "../../src/server/routes/memory.js"
 import { createTestApp } from "../helpers/create-test-app.js"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 // =============================================================================
 // CDP-based DOM observer
 // Replaces polling loops with event-driven observation of DOM mutations,

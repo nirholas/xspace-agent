@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 /**
  * A fixed-capacity ring buffer that avoids repeated array allocation.
  * Implements push(), slice(), filter(), length, and [Symbol.iterator]

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import { createTestServer } from "../helpers/create-test-server.js"
 import { createConnectedClient, waitForEvent, disconnectClient } from "../helpers/socket-helpers.js"
 

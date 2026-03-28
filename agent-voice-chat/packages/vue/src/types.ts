@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import type { Message } from '@agent-voice-chat/core';
 import type { Ref } from 'vue';
 

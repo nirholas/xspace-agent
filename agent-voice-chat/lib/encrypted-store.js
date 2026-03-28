@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 const fs = require("fs")
 const path = require("path")
 const { logger } = require("../src/server/logger")

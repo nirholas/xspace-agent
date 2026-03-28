@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 // =============================================================================
 // Enterprise Auth — Password Service
 // Bcrypt hashing, validation, strength checking, account lockout

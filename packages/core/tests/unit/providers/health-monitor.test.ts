@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ProviderHealthMonitor } from '../../../src/providers/health-monitor'
 import type { RoutableProvider, HealthCheckResult } from '../../../src/providers/types'

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 const axios = require("axios")
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY

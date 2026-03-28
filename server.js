@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 /**
  * @deprecated This legacy server entry point is deprecated and will be removed in a future release.
  * Use `packages/server/src/index.ts` instead.

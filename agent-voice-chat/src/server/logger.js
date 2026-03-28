@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 nirholas (https://github.com/nirholas/xspace-agent)
+
 const pino = require("pino")
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production"
