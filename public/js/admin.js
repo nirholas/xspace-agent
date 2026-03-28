@@ -83,9 +83,12 @@ class AdminApp extends EventEmitter {
     this.socket = null
   }
 
-  init() {
-    // Load API key from session
-    this.state.apiKey = sessionStorage.getItem('apiKey')
+  async init() {
+    // Load API key from URL/session
+    this.state.apiKey = this._loadApiKey()
+
+    // If server requires auth and current key is missing/invalid, ask once.
+    await this._ensureApiKeyIfRequired()
 
     // Initialize Socket.IO
     this._connectSocket()
@@ -129,6 +132,52 @@ class AdminApp extends EventEmitter {
     console.log('[AdminApp] Initialized')
   }
 
+  _loadApiKey() {
+    const params = new URLSearchParams(window.location.search)
+    const fromQuery = params.get('apiKey') || params.get('adminApiKey') || params.get('key')
+    if (fromQuery) {
+      const clean = fromQuery.trim()
+      if (clean) {
+        sessionStorage.setItem('apiKey', clean)
+
+        const next = new URL(window.location.href)
+        next.searchParams.delete('apiKey')
+        next.searchParams.delete('adminApiKey')
+        next.searchParams.delete('key')
+        window.history.replaceState({}, document.title, next.pathname + next.search + next.hash)
+
+        return clean
+      }
+    }
+    return sessionStorage.getItem('apiKey')
+  }
+
+  _promptForApiKey(reason) {
+    const typed = window.prompt(reason || 'Enter ADMIN_API_KEY')
+    if (!typed) return null
+    const clean = typed.trim()
+    if (!clean) return null
+    sessionStorage.setItem('apiKey', clean)
+    return clean
+  }
+
+  async _ensureApiKeyIfRequired() {
+    try {
+      const headers = this.state.apiKey ? { 'X-API-Key': this.state.apiKey } : {}
+      const probe = await fetch('/state', { headers })
+      if (probe.status !== 401) return
+
+      const reason = this.state.apiKey
+        ? 'The current ADMIN_API_KEY was rejected. Enter a valid ADMIN_API_KEY:'
+        : 'This admin panel is protected. Enter ADMIN_API_KEY:'
+
+      const nextKey = this._promptForApiKey(reason)
+      if (nextKey) this.state.apiKey = nextKey
+    } catch {
+      // Ignore transient probe failures.
+    }
+  }
+
   /** Build headers object with auth for fetch calls */
   authHeaders(extra = {}) {
     const headers = { ...extra }
@@ -153,7 +202,7 @@ class AdminApp extends EventEmitter {
   _connectSocket() {
     const opts = {}
     if (this.state.apiKey) {
-      opts.auth = { token: this.state.apiKey }
+      opts.auth = { apiKey: this.state.apiKey, token: this.state.apiKey }
     }
     this.socket = io('/space', opts)
 
@@ -167,6 +216,15 @@ class AdminApp extends EventEmitter {
     this.socket.on('disconnect', () => {
       this.statusBar.setConnectionState(false)
       this.log('Admin panel disconnected', 'err')
+    })
+
+    this.socket.on('connect_error', (err) => {
+      const msg = (err && err.message) ? err.message : 'connection error'
+      if (String(msg).toLowerCase().includes('unauthorized')) {
+        this.log('Socket auth failed: invalid or missing ADMIN_API_KEY', 'err')
+      } else {
+        this.log('Socket connection error: ' + msg, 'err')
+      }
     })
 
     // Agent status

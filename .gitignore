@@ -146,3 +146,9 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 /agent-space/docs/internal
+.turbo/cache/0b8a56d8d5b7dc67.tar.zst
+.turbo/cache/0b8a56d8d5b7dc67-manifest.json
+.turbo/cache/0b8a56d8d5b7dc67-meta.json
+.turbo/cache/bf7fe322c15693f7.tar.zst
+.turbo/cache/bf7fe322c15693f7-meta.json
+.turbo/cache/bf7fe322c15693f7-manifest.json

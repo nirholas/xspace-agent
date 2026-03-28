@@ -283,7 +283,6 @@ export function createServer(options: ServerOptions = {}): XSpaceServer {
 
   if (ADMIN_API_KEY) {
     app.use('/admin', createAuthMiddleware(ADMIN_API_KEY))
-    app.use('/config', createAuthMiddleware(ADMIN_API_KEY))
     app.use('/state', createAuthMiddleware(ADMIN_API_KEY))
     app.use('/api/personalities', createAuthMiddleware(ADMIN_API_KEY))
     app.use('/api/agents', createAuthMiddleware(ADMIN_API_KEY))

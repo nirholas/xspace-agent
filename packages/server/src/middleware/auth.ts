@@ -67,6 +67,10 @@ export function socketAuthMiddleware(apiKey: string) {
   return (socket: Socket, next: (err?: Error) => void) => {
     const token =
       socket.handshake.auth?.apiKey ??
+      socket.handshake.auth?.token ??
+      socket.handshake.auth?.bearer ??
+      socket.handshake.auth?.authorization?.replace('Bearer ', '') ??
+      (socket.handshake.headers?.authorization as string | undefined)?.replace('Bearer ', '') ??
       (socket.handshake.headers?.['x-api-key'] as string)
 
     if (!token || !timingSafeApiKeyCompare(token, apiKey)) {
