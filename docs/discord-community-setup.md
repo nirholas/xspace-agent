@@ -128,7 +128,7 @@ Here's everything you need to get started:
 
 🎙️ **agent-voice-chat** (Voice AI widget for websites)
 • npm: https://www.npmjs.com/package/agent-voice-chat
-• Docs: https://github.com/nirholas/agent-space/tree/main/agent-voice-chat/docs
+• Docs: https://github.com/nirholas/xspace-agent/tree/main/agent-voice-chat/docs
 • Quick start: add one `<script>` tag to your site
 
 📢 **Channels to know:**
@@ -169,7 +169,7 @@ This is the community hub for:
 
 🔗 **Quick Links**
 • GitHub (xspace-agent): https://github.com/xspace-agent/xspace-agent
-• GitHub (agent-voice-chat): https://github.com/nirholas/agent-space
+• GitHub (agent-voice-chat): https://github.com/nirholas/xspace-agent
 • npm (xspace-agent): https://www.npmjs.com/package/xspace-agent
 • npm (agent-voice-chat): https://www.npmjs.com/package/agent-voice-chat
 

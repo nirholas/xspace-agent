@@ -10,16 +10,18 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/xspace-agent"><img src="https://img.shields.io/npm/v/xspace-agent?color=cb3837&logo=npm" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/xspace-agent"><img src="https://img.shields.io/npm/dm/xspace-agent?color=cb3837" alt="npm downloads" /></a>
-  <a href="https://github.com/nirholas/agent-space/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/nirholas/agent-space/ci.yml?label=CI&logo=github" alt="CI" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/nirholas/agent-space" alt="License" /></a>
-  <a href="https://github.com/nirholas/agent-space"><img src="https://img.shields.io/github/stars/nirholas/agent-space?style=social" alt="GitHub Stars" /></a>
+  <a href="https://github.com/nirholas/xspace-agent/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/nirholas/xspace-agent/ci.yml?label=CI&logo=github" alt="CI" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/nirholas/xspace-agent" alt="License" /></a>
+  <a href="https://github.com/nirholas/xspace-agent"><img src="https://img.shields.io/github/stars/nirholas/xspace-agent?style=social" alt="GitHub Stars" /></a>
+  <a href="https://github.com/nirholas/xspace-agent"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen?logo=node.js" alt="Node 18+" /></a>
 </p>
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> •
   <a href="#features">Features</a> •
-  <a href="#examples">Examples</a> •
+  <a href="#project-structure">Structure</a> •
   <a href="#architecture">Architecture</a> •
+  <a href="#examples">Examples</a> •
   <a href="docs/">Docs</a> •
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
@@ -70,6 +72,14 @@ npx xspace-agent join https://x.com/i/spaces/YOUR_SPACE_ID --provider openai
 <td align="center">🔷<br><b>TypeScript-First</b><br>Full type safety,<br>autocomplete included</td>
 </tr>
 </table>
+
+## Requirements
+
+- **Node.js** >= 18 (tested on 18, 20, 22)
+- **pnpm** >= 9 (for monorepo development) or npm/yarn for consuming the SDK
+- **Chromium** — bundled with Puppeteer, or provide your own via `BROWSER_MODE=connect`
+- **X (Twitter) account** — cookie-based auth (`X_AUTH_TOKEN` + `X_CT0`) or username/password
+- **At least one AI provider key** — OpenAI, Anthropic, or Groq
 
 ## Quick Start
 
@@ -125,15 +135,15 @@ npx xspace-agent join https://x.com/i/spaces/YOUR_SPACE_ID --provider openai
 ## Deploy
 
 <p>
-  <a href="https://railway.app/new/template?template=https://github.com/nirholas/agent-space"><img src="https://railway.app/button.svg" alt="Deploy on Railway" height="32" /></a>
+  <a href="https://railway.app/new/template?template=https://github.com/nirholas/xspace-agent"><img src="https://railway.app/button.svg" alt="Deploy on Railway" height="32" /></a>
   &nbsp;
-  <a href="https://render.com/deploy?repo=https://github.com/nirholas/agent-space"><img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" height="32" /></a>
+  <a href="https://render.com/deploy?repo=https://github.com/nirholas/xspace-agent"><img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" height="32" /></a>
 </p>
 
 Or with Docker:
 
 ```bash
-docker run -e OPENAI_API_KEY=sk-... ghcr.io/nirholas/agent-space
+docker run -e OPENAI_API_KEY=sk-... ghcr.io/nirholas/xspace-agent
 ```
 
 ## Documentation
@@ -256,10 +266,15 @@ tests/                 Top-level integration & load tests
 | [**basic-join**](examples/basic-join/) | Join a Space with an AI agent in ~15 lines |
 | [**transcription-logger**](examples/transcription-logger/) | Listen-only — save timestamped transcripts to file |
 | [**multi-agent-debate**](examples/multi-agent-debate/) | Two AIs (Bull vs Bear) debate live with round-robin turns |
+| [**multi-agent**](examples/multi-agent/) | Multiple AI agents sharing a single Space |
 | [**custom-provider**](examples/custom-provider/) | Use a local LLM (Ollama) or any custom API backend |
 | [**middleware-pipeline**](examples/middleware-pipeline/) | Content filtering, language detection, safety redaction, analytics hooks |
 | [**express-integration**](examples/express-integration/) | Embed the agent in an existing Express app with admin panel |
 | [**scheduled-spaces**](examples/scheduled-spaces/) | Join Spaces on a cron schedule with auto-leave timers |
+| [**discord-bridge**](examples/discord-bridge/) | Control the agent from Discord — join, leave, speak, stream transcriptions |
+| [**chrome-connect**](examples/chrome-connect/) | Connect to an existing Chrome instance instead of launching one |
+| [**with-plugins**](examples/with-plugins/) | Extend agent behavior with custom plugins |
+| [**plugins**](examples/plugins/) | Reusable plugin modules — analytics, moderation, webhooks |
 
 ```bash
 cd examples/basic-join
@@ -271,21 +286,50 @@ npm start
 ## Architecture
 
 ```
-Space Audio → STT → LLM → TTS → Space Audio
-                ↑           ↑
-            Middleware   Middleware
+                         X Space (live audio)
+                                │
+                    Puppeteer + Chrome DevTools Protocol
+                                │
+                    ┌───────────▼────────────┐
+                    │   BrowserLifecycle      │  Auth → Join → Request Speaker → Speak
+                    │   Self-healing CSS/     │  Retries selectors via CSS → text → aria
+                    │   text/aria selectors   │
+                    └───────────┬────────────┘
+                                │  RTCPeerConnection audio hooks
+                    ┌───────────▼────────────┐
+                    │   AudioPipeline         │  PCM capture → VAD → silence detection
+                    │                         │  → WAV encoding → TTS injection
+                    └───────────┬────────────┘
+                                │
+          ┌─────────────────────┼─────────────────────┐
+          │                     │                     │
+   ┌──────▼──────┐      ┌──────▼──────┐      ┌──────▼──────┐
+   │  STT        │      │  LLM        │      │  TTS        │
+   │  Deepgram   │      │  OpenAI     │      │  ElevenLabs │
+   │  Whisper    │      │  Claude     │      │  OpenAI TTS │
+   │  (Groq/OAI) │      │  Groq       │      │  Browser    │
+   └──────┬──────┘      │  Custom     │      └──────┬──────┘
+          │              └──────┬──────┘             │
+          │    before:stt       │    before:llm      │    before:tts
+          │    after:stt        │    after:llm       │    after:tts
+          │  ← middleware →     │  ← middleware →     │  ← middleware →
+          │                     │                     │
+   ┌──────▼─────────────────────▼─────────────────────▼──────┐
+   │  Intelligence Layer                                      │
+   │  Speaker ID · Topic tracking · Sentiment · Context mgmt  │
+   └─────────────────────────┬───────────────────────────────┘
+                             │
+   ┌─────────────────────────▼───────────────────────────────┐
+   │  Turn Management + FSM                                   │
+   │  Decision engine · Interruption handling · Response pace  │
+   │                                                          │
+   │  idle → launching → authenticating → joining → listening │
+   │                                          ↕               │
+   │                                       speaking → leaving │
+   └──────────────────────────────────────────────────────────┘
 ```
 
-The agent connects to X Spaces via a headless browser, captures audio streams, routes them through a configurable STT → LLM → TTS pipeline, and speaks back into the Space. Every stage supports middleware for logging, filtering, translation, and more.
-
-```
-packages/
-  core/       ← SDK library (xspace-agent on npm)
-  cli/        ← Command-line tool (npx xspace-agent)
-  server/     ← Admin panel + WebSocket API
-examples/     ← Ready-to-run example projects
-docs/         ← Documentation
-```
+The agent connects to X Spaces via a headless Chromium browser, hooks into the WebRTC audio stream, and routes it through a fully configurable **STT → LLM → TTS** pipeline. Every stage supports middleware for logging, filtering, translation, content moderation, and more. The intelligence layer attributes speech to speakers, tracks topics, and manages conversation context. A finite state machine governs the full agent lifecycle.
 
 ## Providers
 
@@ -313,8 +357,8 @@ _Be the first! [Open a PR](CONTRIBUTING.md) to add your project._
 
 ## Community
 
-- 🐛 [GitHub Issues](https://github.com/nirholas/agent-space/issues) — bug reports and feature requests
-- 🗣️ [GitHub Discussions](https://github.com/nirholas/agent-space/discussions) — ideas and broader conversations
+- 🐛 [GitHub Issues](https://github.com/nirholas/xspace-agent/issues) — bug reports and feature requests
+- 🗣️ [GitHub Discussions](https://github.com/nirholas/xspace-agent/discussions) — ideas and broader conversations
 
 ## Contributing
 

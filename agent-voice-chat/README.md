@@ -172,8 +172,8 @@ agent-voice-chat/
 ## Community
 
 - [**Discord**](https://discord.gg/YOUR_INVITE_CODE) — Ask questions, share what you've built, show off your deployments
-- [**GitHub Discussions**](https://github.com/nirholas/agent-space/discussions) — Longer-form Q&A, ideas, and show & tell
-- [**GitHub Issues**](https://github.com/nirholas/agent-space/issues) — Bug reports and feature requests
+- [**GitHub Discussions**](https://github.com/nirholas/xspace-agent/discussions) — Longer-form Q&A, ideas, and show & tell
+- [**GitHub Issues**](https://github.com/nirholas/xspace-agent/issues) — Bug reports and feature requests
 
 ## Contributing
 
