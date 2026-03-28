@@ -12,7 +12,6 @@
   <a href="https://www.npmjs.com/package/xspace-agent"><img src="https://img.shields.io/npm/dm/xspace-agent?color=cb3837" alt="npm downloads" /></a>
   <a href="https://github.com/nirholas/agent-space/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/nirholas/agent-space/ci.yml?label=CI&logo=github" alt="CI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/nirholas/agent-space" alt="License" /></a>
-  <a href="https://discord.gg/xspace-agent"><img src="https://img.shields.io/discord/1234567890?label=Discord&logo=discord&color=5865F2" alt="Discord" /></a>
   <a href="https://github.com/nirholas/agent-space"><img src="https://img.shields.io/github/stars/nirholas/agent-space?style=social" alt="GitHub Stars" /></a>
 </p>
 
@@ -22,7 +21,6 @@
   <a href="#examples">Examples</a> •
   <a href="#architecture">Architecture</a> •
   <a href="docs/">Docs</a> •
-  <a href="https://discord.gg/xspace-agent">Discord</a> •
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
@@ -160,7 +158,6 @@ Full docs live in [docs/](docs/). Key guides:
 | [**transcription-logger**](examples/transcription-logger/) | Listen-only — save timestamped transcripts to file |
 | [**multi-agent-debate**](examples/multi-agent-debate/) | Two AIs (Bull vs Bear) debate live with round-robin turns |
 | [**custom-provider**](examples/custom-provider/) | Use a local LLM (Ollama) or any custom API backend |
-| [**discord-bridge**](examples/discord-bridge/) | Control the agent from Discord — join, leave, speak, stream transcriptions |
 | [**middleware-pipeline**](examples/middleware-pipeline/) | Content filtering, language detection, safety redaction, analytics hooks |
 | [**express-integration**](examples/express-integration/) | Embed the agent in an existing Express app with admin panel |
 | [**scheduled-spaces**](examples/scheduled-spaces/) | Join Spaces on a cron schedule with auto-leave timers |
@@ -217,7 +214,6 @@ _Be the first! [Open a PR](CONTRIBUTING.md) to add your project._
 
 ## Community
 
-- 💬 [Discord](https://discord.gg/xspace-agent) — ask questions, share what you've built
 - 🐛 [GitHub Issues](https://github.com/nirholas/agent-space/issues) — bug reports and feature requests
 - 🗣️ [GitHub Discussions](https://github.com/nirholas/agent-space/discussions) — ideas and broader conversations
 
