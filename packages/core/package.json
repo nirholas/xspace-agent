@@ -74,7 +74,7 @@
     "stt",
     "speech"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
     "@node-saml/passport-saml": "^5.0.0",

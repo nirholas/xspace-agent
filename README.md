@@ -229,4 +229,4 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instr
 
 ## License
 
-MIT &copy; 2026
+Apache-2.0 &copy; 2026

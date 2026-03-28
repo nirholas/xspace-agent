@@ -43,6 +43,6 @@
     "vite-plugin-dts": "^3.9.0"
   },
   "sideEffects": false,
-  "license": "MIT",
+  "license": "Apache-2.0",
   "keywords": ["voice-chat", "ai", "react", "hooks", "component"]
 }

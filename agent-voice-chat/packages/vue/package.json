@@ -40,6 +40,6 @@
     "vue-tsc": "^2.0.0"
   },
   "sideEffects": false,
-  "license": "MIT",
+  "license": "Apache-2.0",
   "keywords": ["voice-chat", "ai", "vue", "composable", "component"]
 }

@@ -17,7 +17,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "dependencies": {
     "xspace-agent": "workspace:*",
     "cors": "^2.8.5",
