@@ -8,15 +8,6 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/xspace-agent"><img src="https://img.shields.io/npm/v/xspace-agent?color=cb3837&logo=npm" alt="npm version" /></a>
-  <a href="https://www.npmjs.com/package/xspace-agent"><img src="https://img.shields.io/npm/dm/xspace-agent?color=cb3837" alt="npm downloads" /></a>
-  <a href="https://github.com/nirholas/xspace-agent/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/nirholas/xspace-agent/ci.yml?label=CI&logo=github" alt="CI" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/nirholas/xspace-agent" alt="License" /></a>
-  <a href="https://github.com/nirholas/xspace-agent"><img src="https://img.shields.io/github/stars/nirholas/xspace-agent?style=social" alt="GitHub Stars" /></a>
-  <a href="https://github.com/nirholas/xspace-agent"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen?logo=node.js" alt="Node 18+" /></a>
-</p>
-
-<p align="center">
   <a href="#quick-start">Quick Start</a> •
   <a href="#features">Features</a> •
   <a href="#project-structure">Structure</a> •
