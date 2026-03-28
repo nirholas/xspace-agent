@@ -233,6 +233,23 @@ export function createServer(options: ServerOptions = {}): XSpaceServer {
     totalCost: 0,
   }
 
+  // Runtime settings — mutable in-memory overrides for environment variables.
+  // These do NOT persist across server restarts; use env vars for that.
+  const runtimeSettings = {
+    auth: {
+      method: (process.env.X_AUTH_TOKEN ? 'cookie' : 'credentials') as 'cookie' | 'credentials',
+    },
+    apiKeys: {} as Record<string, string>,
+    behavior: {
+      aiProvider: AI_PROVIDER as string,
+      sttProvider: (process.env.STT_PROVIDER || 'groq') as string,
+      ttsProvider: (process.env.TTS_PROVIDER || 'elevenlabs') as string,
+      headless: process.env.HEADLESS !== 'false',
+      autoJoin: false,
+    },
+    systemPrompt: process.env.SYSTEM_PROMPT || '',
+  }
+
   // -------------------------------------------------------------------------
   // Personality system
   // -------------------------------------------------------------------------
@@ -288,6 +305,7 @@ export function createServer(options: ServerOptions = {}): XSpaceServer {
     app.use('/api/agents', createAuthMiddleware(ADMIN_API_KEY))
     app.use('/api/deployments', createAuthMiddleware(ADMIN_API_KEY))
     app.use('/api/builder', createAuthMiddleware(ADMIN_API_KEY))
+    app.use('/api/settings', createAuthMiddleware(ADMIN_API_KEY))
   }
 
   app.get('/', (_req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')))
@@ -308,6 +326,117 @@ export function createServer(options: ServerOptions = {}): XSpaceServer {
       messages: state.messages.slice(-50),
     }),
   )
+
+  // -------------------------------------------------------------------------
+  // Settings API — read / write runtime configuration
+  // -------------------------------------------------------------------------
+
+  app.get('/api/settings', (_req, res) => {
+    res.json({
+      auth: {
+        method: runtimeSettings.auth.method,
+        hasAuthToken: !!(process.env.X_AUTH_TOKEN),
+        hasCt0: !!(process.env.X_CT0),
+        hasUsername: !!(process.env.X_USERNAME),
+        hasPassword: !!(process.env.X_PASSWORD),
+      },
+      apiKeys: {
+        hasOpenai: !!(process.env.OPENAI_API_KEY || runtimeSettings.apiKeys.openai),
+        hasAnthropic: !!(process.env.ANTHROPIC_API_KEY || runtimeSettings.apiKeys.anthropic),
+        hasGroq: !!(process.env.GROQ_API_KEY || runtimeSettings.apiKeys.groq),
+        hasElevenlabs: !!(process.env.ELEVENLABS_API_KEY || runtimeSettings.apiKeys.elevenlabs),
+      },
+      behavior: { ...runtimeSettings.behavior },
+      systemPrompt: runtimeSettings.systemPrompt,
+    })
+  })
+
+  app.post('/api/settings', (req, res) => {
+    const { section, data } = req.body || {}
+    if (!section || !data) {
+      res.status(400).json(buildErrorResponse('VALIDATION_ERROR', 'Missing section or data'))
+      return
+    }
+
+    const updated: string[] = []
+
+    switch (section) {
+      case 'auth': {
+        if (data.method) runtimeSettings.auth.method = data.method
+        if (data.authToken) { process.env.X_AUTH_TOKEN = data.authToken; updated.push('X_AUTH_TOKEN') }
+        if (data.ct0) { process.env.X_CT0 = data.ct0; updated.push('X_CT0') }
+        if (data.username) { process.env.X_USERNAME = data.username; updated.push('X_USERNAME') }
+        if (data.password) { process.env.X_PASSWORD = data.password; updated.push('X_PASSWORD') }
+        if (data.method) updated.push('auth method')
+        break
+      }
+      case 'apiKeys': {
+        if (data.openai) { process.env.OPENAI_API_KEY = data.openai; runtimeSettings.apiKeys.openai = data.openai; updated.push('OpenAI') }
+        if (data.anthropic) { process.env.ANTHROPIC_API_KEY = data.anthropic; runtimeSettings.apiKeys.anthropic = data.anthropic; updated.push('Anthropic') }
+        if (data.groq) { process.env.GROQ_API_KEY = data.groq; runtimeSettings.apiKeys.groq = data.groq; updated.push('Groq') }
+        if (data.elevenlabs) { process.env.ELEVENLABS_API_KEY = data.elevenlabs; runtimeSettings.apiKeys.elevenlabs = data.elevenlabs; updated.push('ElevenLabs') }
+        break
+      }
+      case 'behavior': {
+        if (data.aiProvider) { runtimeSettings.behavior.aiProvider = data.aiProvider; updated.push('AI provider') }
+        if (data.sttProvider) { runtimeSettings.behavior.sttProvider = data.sttProvider; updated.push('STT provider') }
+        if (data.ttsProvider) { runtimeSettings.behavior.ttsProvider = data.ttsProvider; updated.push('TTS provider') }
+        if (data.headless !== undefined) {
+          runtimeSettings.behavior.headless = data.headless
+          process.env.HEADLESS = String(data.headless)
+          updated.push('headless')
+        }
+        if (data.autoJoin !== undefined) { runtimeSettings.behavior.autoJoin = data.autoJoin; updated.push('auto-join') }
+        break
+      }
+      case 'systemPrompt': {
+        if (typeof data.prompt === 'string') {
+          runtimeSettings.systemPrompt = data.prompt
+          process.env.SYSTEM_PROMPT = data.prompt
+          updated.push('system prompt')
+          // Hot-swap into running agent if possible
+          if (state.agent) {
+            try {
+              const agent = state.agent as any
+              if (agent.config?.ai) agent.config.ai.systemPrompt = data.prompt
+            } catch { /* best effort */ }
+          }
+        }
+        break
+      }
+      case 'voice': {
+        if (data.ttsProvider) { runtimeSettings.behavior.ttsProvider = data.ttsProvider; updated.push('TTS provider') }
+        if (data.voiceId) { process.env.VOICE_ID = data.voiceId; updated.push('voice ID') }
+        if (data.speed !== undefined) { updated.push('voice speed') }
+        if (data.llmProvider) { runtimeSettings.behavior.aiProvider = data.llmProvider; updated.push('LLM provider') }
+        if (data.llmModel) { process.env.AI_MODEL = data.llmModel; updated.push('LLM model') }
+        // Hot-swap into running agent if possible
+        if (state.agent) {
+          try {
+            const agent = state.agent as any
+            if (data.ttsProvider && agent.config?.voice) agent.config.voice.provider = data.ttsProvider
+            if (data.voiceId && agent.config?.voice) agent.config.voice.voiceId = data.voiceId
+            if (data.speed !== undefined && agent.config?.voice) agent.config.voice.speed = data.speed
+            if (data.llmProvider && agent.config?.ai) agent.config.ai.provider = data.llmProvider
+            if (data.llmModel && agent.config?.ai) agent.config.ai.model = data.llmModel
+          } catch { /* best effort */ }
+        }
+        break
+      }
+      default:
+        res.status(400).json(buildErrorResponse('VALIDATION_ERROR', `Unknown section: ${section}`))
+        return
+    }
+
+    if (updated.length === 0) {
+      res.status(400).json(buildErrorResponse('VALIDATION_ERROR', 'No settings were updated — check your data'))
+      return
+    }
+
+    log.info({ section, updated }, 'settings updated')
+    emitLog('info', `Settings updated: ${updated.join(', ')}`)
+    res.json({ success: true, updated })
+  })
 
   // --- Marketplace routes ---
   app.use(createMarketplaceRoutes())
@@ -809,6 +938,29 @@ export function createServer(options: ServerOptions = {}): XSpaceServer {
       if (state.agent) {
         state.agent.emit('orchestrator:force-speak' as any, { botId })
         emitLog('info', `Force speak: ${botId}`)
+      }
+    })
+
+    handleEvent<{ text: string }>('xspace:message', async ({ text }) => {
+      if (!state.agent) {
+        socket.emit('xSpacesError', { error: 'No agent running. Start bot first.' })
+        return
+      }
+      emitLog('info', `Manual message: ${text.slice(0, 100)}`)
+      try {
+        await state.agent.say(text)
+        const msg: SpaceMessage = {
+          id: Date.now().toString(),
+          agentId: 0,
+          name: 'Agent (manual)',
+          text,
+          timestamp: Date.now(),
+        }
+        state.messages.push(msg)
+        if (state.messages.length > 100) state.messages = state.messages.slice(-100)
+        spaceNS.emit('textComplete', msg)
+      } catch (err: any) {
+        socket.emit('xSpacesError', { error: `Failed to speak: ${redactSecrets(err.message)}` })
       }
     })
 

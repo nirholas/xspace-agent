@@ -11,6 +11,7 @@ export class AgentsPage {
     this.container = container
     this.render()
     this.bind()
+    this.loadSettings()
   }
 
   render() {
@@ -90,6 +91,9 @@ export class AgentsPage {
               <label class="form-label">Model</label>
               <input type="text" class="input" id="agents-llm-model" placeholder="e.g., gpt-4o, claude-sonnet-4-20250514" />
             </div>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="agents-btn-save-voice">Save Voice &amp; LLM</button>
+            </div>
           </div>
         </div>
 
@@ -143,12 +147,76 @@ export class AgentsPage {
       if (e.key === 'Enter') $('agents-btn-say')?.click()
     })
 
-    // Save prompt
-    $('agents-btn-save-prompt')?.addEventListener('click', () => {
+    // Save prompt to server
+    $('agents-btn-save-prompt')?.addEventListener('click', async () => {
+      const btn = $('agents-btn-save-prompt')
       const prompt = $('agents-system-prompt').value
-      this.app.state.systemPrompt = prompt
-      this.app.log('System prompt saved', 'ok')
+      btn.disabled = true
+      btn.textContent = 'Saving...'
+      try {
+        const res = await this.app.authFetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ section: 'systemPrompt', data: { prompt } }),
+        })
+        const result = await res.json()
+        if (!res.ok) throw new Error(result.error || 'Save failed')
+        this.app.state.systemPrompt = prompt
+        this.app.log('System prompt saved: ' + result.updated.join(', '), 'ok')
+      } catch (err) {
+        this.app.log('Save prompt failed: ' + err.message, 'err')
+      } finally {
+        btn.disabled = false
+        btn.textContent = 'Save Prompt'
+      }
     })
+
+    // Save voice & LLM settings to server
+    $('agents-btn-save-voice')?.addEventListener('click', async () => {
+      const btn = $('agents-btn-save-voice')
+      btn.disabled = true
+      btn.textContent = 'Saving...'
+      try {
+        const data = {
+          ttsProvider: $('agents-tts-provider')?.value,
+          voiceId: $('agents-voice-id')?.value?.trim() || undefined,
+          speed: parseFloat($('agents-voice-speed')?.value || '1.0'),
+          llmProvider: $('agents-llm-provider')?.value,
+          llmModel: $('agents-llm-model')?.value?.trim() || undefined,
+        }
+        const res = await this.app.authFetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ section: 'voice', data }),
+        })
+        const result = await res.json()
+        if (!res.ok) throw new Error(result.error || 'Save failed')
+        this.app.log('Voice & LLM saved: ' + result.updated.join(', '), 'ok')
+      } catch (err) {
+        this.app.log('Save voice settings failed: ' + err.message, 'err')
+      } finally {
+        btn.disabled = false
+        btn.textContent = 'Save Voice & LLM'
+      }
+    })
+  }
+
+  async loadSettings() {
+    try {
+      const res = await this.app.authFetch('/api/settings')
+      if (!res.ok) return
+      const settings = await res.json()
+      const $ = id => document.getElementById(id)
+
+      if (settings.systemPrompt) {
+        const el = $('agents-system-prompt')
+        if (el) { el.value = settings.systemPrompt; $('agents-prompt-chars').textContent = settings.systemPrompt.length }
+      }
+      if (settings.behavior) {
+        if ($('agents-tts-provider')) $('agents-tts-provider').value = settings.behavior.ttsProvider || 'elevenlabs'
+        if ($('agents-llm-provider')) $('agents-llm-provider').value = settings.behavior.aiProvider || 'openai'
+      }
+    } catch { /* settings not available */ }
   }
 
   _renderAgentCards(agents) {

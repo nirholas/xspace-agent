@@ -85,6 +85,9 @@ export const SocketEventSchemas: Record<string, z.ZodTypeAny> = {
   'orchestrator:force-speak': z.object({
     botId: z.string().min(1).max(100),
   }),
+  'xspace:message': z.object({
+    text: z.string().min(1).max(2000),
+  }),
 }
 
 // ---------------------------------------------------------------------------
