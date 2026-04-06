@@ -111,3 +111,4 @@ Extract common component styles used across multiple pages:
 - [ ] No color hex values remain inline except in page-specific overrides with a comment explaining why
 - [ ] Adding a new page only requires importing 2 CSS files + page-specific styles
 
+
