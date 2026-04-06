@@ -223,3 +223,4 @@ discordAgent.on('transcription', ({ speaker, text }) => {
 - [ ] Custom adapter interface is documented and usable
 - [ ] Platform-specific dependencies are optional (not bundled in core)
 
+
