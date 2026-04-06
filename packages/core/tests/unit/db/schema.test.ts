@@ -593,3 +593,4 @@ describe('Schema — SQL column name conventions', () => {
   })
 })
 
+
