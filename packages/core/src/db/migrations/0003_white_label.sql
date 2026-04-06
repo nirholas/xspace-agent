@@ -103,3 +103,4 @@ CREATE INDEX IF NOT EXISTS idx_impersonation_target ON impersonation_sessions(ta
 INSERT INTO _migrations (name) VALUES ('0003_white_label')
 ON CONFLICT DO NOTHING;
 
+
