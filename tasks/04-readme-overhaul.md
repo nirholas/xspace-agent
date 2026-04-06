@@ -102,3 +102,4 @@ Convert the ASCII diagram from CLAUDE.md into a clean Mermaid diagram or a rende
 - [ ] Architecture diagram is readable on both light and dark GitHub themes
 - [ ] Mobile GitHub renders correctly (no broken tables)
 
+
