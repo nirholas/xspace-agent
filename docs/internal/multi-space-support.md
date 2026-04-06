@@ -138,3 +138,4 @@ BROWSER_POOL_SIZE=5       # Maximum Puppeteer instances
 - [ ] MAX_SPACES limit is enforced
 - [ ] Browser cleanup works when removing a space
 
+
