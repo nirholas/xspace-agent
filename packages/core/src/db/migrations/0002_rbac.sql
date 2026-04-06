@@ -55,3 +55,4 @@ CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(email);
 CREATE INDEX IF NOT EXISTS idx_invitations_token ON invitations(token_hash);
 CREATE INDEX IF NOT EXISTS idx_teams_org ON teams(org_id);
 
+
