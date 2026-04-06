@@ -86,3 +86,4 @@ docker compose down -v
 | Prometheus (optional) | 0.5 cores | 512MB | 1GB/week |
 | Grafana (optional) | 0.5 cores | 256MB | 100MB |
 
+
