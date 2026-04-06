@@ -33,3 +33,4 @@ Edit `index.ts` to customize:
 - `ai.systemPrompt` — Change the agent's personality
 - `ai.provider` — Switch to `'claude'` or `'groq'`
 
+
