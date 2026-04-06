@@ -60,3 +60,4 @@ Run each `.md` file as a prompt to an AI coding agent. Tasks are ordered by depe
 | 29 | `29-npm-publish-ready.md` | Package.json polish, exports map, provenance, size limits |
 | 30 | `30-final-qa-sweep.md` | Final review: dead code, TODOs, console.logs, broken links |
 
+
