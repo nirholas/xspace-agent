@@ -321,3 +321,4 @@ Socket.IO provider client:
 - **CORS** should be configured on the server if the widget is hosted on a different domain.
 - **Microphone access** requires explicit browser permission from the user.
 
+
