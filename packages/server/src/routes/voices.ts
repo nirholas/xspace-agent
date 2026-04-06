@@ -279,3 +279,4 @@ function estimateAudioDuration(buffer: Buffer, mimeType: string): number {
   return buffer.length / bytesPerSecond
 }
 
+
