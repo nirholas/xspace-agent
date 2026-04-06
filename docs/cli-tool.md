@@ -204,3 +204,4 @@ function resolveConfig(cliFlags: Partial<AgentConfig>): AgentConfig {
 - [ ] `--help` shows clear usage information
 - [ ] Ctrl+C gracefully leaves Space and cleans up
 
+
