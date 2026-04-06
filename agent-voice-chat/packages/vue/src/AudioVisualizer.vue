@@ -60,3 +60,4 @@ const barElements = computed(() =>
   </div>
 </template>
 
+
