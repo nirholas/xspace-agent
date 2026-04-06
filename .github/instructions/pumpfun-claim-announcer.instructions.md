@@ -55,3 +55,4 @@ All types at: `https://github.com/pump-fun/pump-public-docs`
 
 See `docs/pumpfun-claim-announcer.md` in this repo for complete architecture, attack vectors, event schemas, and implementation checklist.
 
+
