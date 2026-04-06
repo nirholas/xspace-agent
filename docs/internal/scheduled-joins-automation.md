@@ -155,3 +155,4 @@ Start simple — just "log" and "save-transcript". Discord/Slack webhooks can be
 - [ ] Schedule persists across server restarts
 - [ ] Multiple schedules work without conflicts
 
+
