@@ -138,3 +138,4 @@ if (missing.length) {
 - [ ] Bot still functions normally with auth enabled
 - [ ] When ADMIN_TOKEN is not set, auth is disabled (backwards compatible)
 
+
