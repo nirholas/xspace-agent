@@ -799,3 +799,4 @@ class KnowledgeBase {
 
 module.exports = { KnowledgeBase, splitSentences, combineSentencesIntoChunks, chunkByParagraphs, chunkMarkdown, parseCSV, parseHTML, preprocessText, extractHeaders, tokenize, bm25Score }
 
+
