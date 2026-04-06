@@ -280,3 +280,4 @@ export function clearEventBuffer(): void {
   eventBuffer.length = 0;
 }
 
+
