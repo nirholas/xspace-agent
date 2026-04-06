@@ -115,3 +115,4 @@ export function searchBySimilarity<T extends { embedding?: number[] }>(
   return scored.slice(0, limit)
 }
 
+
