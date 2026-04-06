@@ -65,3 +65,4 @@ pnpm lint:fix            # eslint --fix
 - Environment variables: see `.env.example` (~215 vars with comments)
 - Docs: see `docs/` (43 markdown files on architecture, deployment, API reference)
 
+
