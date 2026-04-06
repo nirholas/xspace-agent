@@ -3988,3 +3988,4 @@ The server also exposes a Socket.IO namespace at `/space` for real-time bidirect
 | `xSpacesError` | Error messages |
 | `personality:changed` | Personality hot-swap notification |
 
+
