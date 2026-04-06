@@ -256,3 +256,4 @@ async function findMicButton(page) {
 
 module.exports = { joinSpace, requestSpeaker, unmute, leaveSpace, getSpaceState, waitForSpeakerAccess }
 
+
