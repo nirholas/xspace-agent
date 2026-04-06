@@ -127,3 +127,4 @@ function mapTemperature(personality: PersonalityConfig): number {
   return 0.3 + (avg / 100) * 0.7; // Range: 0.3 - 1.0
 }
 
+
