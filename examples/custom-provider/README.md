@@ -50,3 +50,4 @@ This works with any backend: vLLM, llama.cpp, text-generation-webui, LM Studio, 
 | `OLLAMA_HOST` | Ollama server URL | `http://localhost:11434` |
 | `OLLAMA_MODEL` | Ollama model name | `llama3` |
 
+
