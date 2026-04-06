@@ -330,3 +330,4 @@ describe("Knowledge API routes", () => {
   })
 })
 
+
