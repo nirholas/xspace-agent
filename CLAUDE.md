@@ -240,3 +240,4 @@ Multi-stage Dockerfile: deps → builder → runtime (node:20-slim + Chromium).
 - Don't hardcode X Space CSS selectors — use `SelectorEngine` with multiple fallback strategies.
 - Don't skip the FSM — agent lifecycle transitions go through the state machine, not ad-hoc flags.
 
+
