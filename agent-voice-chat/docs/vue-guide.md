@@ -193,3 +193,4 @@ export default defineNuxtConfig({
 
 > **Note:** The voice chat component uses browser APIs (microphone, audio playback), so it must render client-side only. Wrap it in `<ClientOnly>` in Nuxt.
 
+
