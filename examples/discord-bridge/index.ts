@@ -113,3 +113,4 @@ agent.on('error', (err) => {
 await discord.login(process.env.DISCORD_TOKEN)
 console.log('Discord bridge running. Use !help in Discord for commands.')
 
+
