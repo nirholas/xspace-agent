@@ -499,3 +499,4 @@ For persistent history across sessions, configure a PostgreSQL database via the 
 | `GET /api/analytics/reports/weekly` | Yes | Weekly report |
 | `GET /api/analytics/reports/export` | Yes | CSV/JSON export |
 
+
