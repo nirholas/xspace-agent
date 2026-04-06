@@ -39,3 +39,4 @@ CREATE INDEX IF NOT EXISTS idx_webhooks_org_active ON webhooks(org_id, active);
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook ON webhook_deliveries(webhook_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_status ON webhook_deliveries(status, next_retry_at);
 
+
