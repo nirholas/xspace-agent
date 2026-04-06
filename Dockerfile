@@ -110,3 +110,4 @@ EXPOSE 3000
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "packages/server/dist/index.js"]
 
+
