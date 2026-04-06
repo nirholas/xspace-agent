@@ -225,3 +225,4 @@ export function configToEnv(config: AgentConfig): void {
   if (config.auth.cookiePath) process.env.COOKIE_PATH = config.auth.cookiePath;
 }
 
+
