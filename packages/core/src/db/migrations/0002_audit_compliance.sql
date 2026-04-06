@@ -29,3 +29,4 @@ CREATE INDEX IF NOT EXISTS idx_audit_resource ON audit_logs(resource_type, resou
 CREATE INDEX IF NOT EXISTS idx_audit_severity ON audit_logs(severity, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_request_id ON audit_logs(request_id);
 
+
