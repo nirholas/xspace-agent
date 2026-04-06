@@ -97,3 +97,4 @@ CREATE TABLE publisher_payouts (
 CREATE INDEX idx_publisher_payouts_org ON publisher_payouts(publisher_org_id);
 CREATE INDEX idx_publisher_payouts_status ON publisher_payouts(status);
 
+
