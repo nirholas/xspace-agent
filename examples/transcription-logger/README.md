@@ -37,3 +37,4 @@ Transcriptions are printed to stdout and appended to `transcript.txt`:
 | `OPENAI_API_KEY` | OpenAI key for STT | *required* |
 | `OUTPUT_FILE` | Transcript output path | `transcript.txt` |
 
+
