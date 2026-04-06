@@ -190,3 +190,4 @@ The widget uses Shadow DOM to avoid CSS conflicts with your site. To customize i
 - Audio data is sent to your server (or directly to OpenAI via WebRTC). No audio is stored unless you configure it.
 - The widget requests microphone permission from the browser. Users must explicitly grant access.
 
+
