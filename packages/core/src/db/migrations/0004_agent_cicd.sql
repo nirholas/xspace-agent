@@ -38,3 +38,4 @@ CREATE INDEX IF NOT EXISTS idx_agent_deployments_agent_env ON agent_deployments(
 CREATE INDEX IF NOT EXISTS idx_agent_deployments_org ON agent_deployments(org_id);
 CREATE INDEX IF NOT EXISTS idx_agent_deployments_status ON agent_deployments(status);
 
+
