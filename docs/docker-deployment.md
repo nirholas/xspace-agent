@@ -231,3 +231,4 @@ shm_size: '1gb'
 - [ ] /health endpoint responds correctly
 - [ ] Memory stays under 2GB during normal operation
 
+
