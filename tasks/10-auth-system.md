@@ -96,3 +96,4 @@ This is a single-user tool. One API key protects everything. Keep it simple.
 - [ ] Timing-safe comparison used for API key (no timing attacks)
 - [ ] Live chat (index.html) works without authentication
 
+
