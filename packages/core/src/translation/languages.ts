@@ -102,3 +102,4 @@ export function isLanguageSupported(code: string): boolean {
   return SUPPORTED_LANGUAGES.some((l) => l.code === code)
 }
 
+
