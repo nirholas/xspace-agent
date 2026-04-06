@@ -423,3 +423,4 @@ This project evolved through several phases:
 
 Legacy docs describing earlier phases are preserved in `docs/` with deprecation banners.
 
+
