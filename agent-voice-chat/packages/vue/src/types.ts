@@ -71,3 +71,4 @@ export interface AudioVisualizerProps {
   inactiveColor?: string;
 }
 
+
