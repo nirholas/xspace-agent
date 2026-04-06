@@ -76,3 +76,4 @@ server.listen(PORT, () => {
 agent.on('transcription', ({ speaker, text }) => console.log(`[Space] ${speaker}: ${text}`))
 agent.on('response', ({ text }) => console.log(`[Agent] ${text}`))
 
+
