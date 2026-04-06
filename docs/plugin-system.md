@@ -221,3 +221,4 @@ async function generateResponse(messages, tools) {
 - [ ] Missing env vars for a plugin gracefully disables it
 - [ ] Plugin errors don't crash the agent
 
+
