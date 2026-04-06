@@ -182,3 +182,4 @@ ai: {
 - **[Plugin System](plugin-system.md)** -- extend agent behavior with middleware and plugins
 - **[Environment Variables Reference](env-vars-reference.md)** -- full list of all configuration options
 
+
