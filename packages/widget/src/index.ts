@@ -520,3 +520,4 @@ export function createWidget(config: WidgetConfig): XSpaceWidget {
   return widget
 }
 
+
