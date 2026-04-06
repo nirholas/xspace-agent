@@ -74,3 +74,4 @@ src/
 - The `start` command requires `server.js` directly — the legacy monolithic server.
 - Config files are written with `0o600` permissions. A warning is logged if config is world-readable.
 
+
