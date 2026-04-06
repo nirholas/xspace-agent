@@ -58,3 +58,4 @@ class ForbiddenError extends AppError {
 
 module.exports = { ERROR_CODES, AppError, NotFoundError, ConflictError, ValidationError, ProviderError, ForbiddenError }
 
+
