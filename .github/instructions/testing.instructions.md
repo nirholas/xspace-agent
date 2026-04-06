@@ -33,3 +33,4 @@ cd packages/core && npx vitest run src/__tests__/e2e/      # E2E only
 - Mock external dependencies (LLM/STT/TTS providers, Puppeteer)
 - E2E tests must be gated behind environment variable checks
 
+
