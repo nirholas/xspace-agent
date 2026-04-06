@@ -86,3 +86,4 @@ export interface AudioVisualizerProps {
   style?: React.CSSProperties;
 }
 
+
