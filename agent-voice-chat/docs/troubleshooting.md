@@ -165,3 +165,4 @@ COPY . .
 4. **Try a different provider.** Switch `AI_PROVIDER` to rule out provider-specific issues.
 5. **Open an issue.** File a bug at the project's GitHub Issues with your server logs and browser console output.
 
+
