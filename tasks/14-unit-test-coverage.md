@@ -96,3 +96,4 @@ export default defineConfig({
 - [ ] Coverage report is generated in HTML format for review
 - [ ] CI pipeline enforces coverage thresholds (fails if below)
 
+
