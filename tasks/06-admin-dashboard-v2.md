@@ -89,3 +89,4 @@ The admin panel at `public/admin.html` has a sidebar nav and page structure but 
 - [ ] Responsive layout works on tablet (1024px) and mobile (768px)
 - [ ] Loading states shown while data is being fetched
 
+
