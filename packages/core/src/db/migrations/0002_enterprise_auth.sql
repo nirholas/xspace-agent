@@ -132,3 +132,4 @@ CREATE TABLE IF NOT EXISTS oauth_accounts (
 CREATE INDEX idx_oauth_accounts_user ON oauth_accounts(user_id);
 CREATE UNIQUE INDEX idx_oauth_accounts_provider ON oauth_accounts(provider, provider_account_id);
 
+
