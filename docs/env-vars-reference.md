@@ -75,3 +75,4 @@
 | `RETWEET_READ_INTERVAL` | `10` | twitterClient.js | Seconds between Twitter checks |
 | `LAUNCH_PLATFORM` | derived from BUY_LINK | server.js | Exchange platform hostname |
 
+
