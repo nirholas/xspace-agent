@@ -1,4 +1,4 @@
-<p align="center"> 
+<p align="center">  
   <img src="public/images/logo.svg" width="120" alt="X Space Agent" /> 
 </p>
 
