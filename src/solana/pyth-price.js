@@ -1,13 +1,12 @@
 /**
- * Pyth Network price feed integration via the Hermes REST/WebSocket API.
+ * Pyth Network price feed integration via the Hermes REST/SSE API.
  * Read-only — no on-chain interaction required.
  *
  * Common price feed IDs from https://pyth.network/developers/price-feed-ids
  */
 
-import { PriceServiceConnection } from '@pythnetwork/price-service-client';
+import { HermesClient } from '@pythnetwork/hermes-client';
 
-// Pyth Hermes public endpoint
 const HERMES_URL = 'https://hermes.pyth.network';
 
 // Curated feed IDs for tokens commonly used in this platform
@@ -22,25 +21,21 @@ export const PRICE_FEED_IDS = {
 	PYTH: '0bbf28e9a841a1cc788f6a361b17ca072d0ea3098a1e5df1c3922d06719579ff',
 };
 
-let _connection = null;
+let _client = null;
 
-function getConnection() {
-	if (!_connection) {
-		_connection = new PriceServiceConnection(HERMES_URL, {
-			priceFeedRequestConfig: { binary: false },
-		});
+function getClient() {
+	if (!_client) {
+		_client = new HermesClient(HERMES_URL);
 	}
-	return _connection;
+	return _client;
 }
 
-/**
- * Parse a raw Pyth price+exponent into a human-readable float.
- * @param {import('@pythnetwork/price-service-client').Price} p
- * @returns {number}
- */
-function toFloat(p) {
-	if (!p) return NaN;
-	return Number(p.price) * 10 ** Number(p.expo);
+function parseParsedPrice(parsedEntry) {
+	const p = parsedEntry?.price;
+	if (!p) return { price: NaN, confidence: NaN, publishTime: 0 };
+	const price = Number(p.price) * 10 ** Number(p.expo);
+	const confidence = Number(p.conf) * 10 ** Number(p.expo);
+	return { price, confidence, publishTime: parsedEntry.price?.publishTime ?? 0 };
 }
 
 /**
@@ -57,18 +52,22 @@ export async function getPrices(symbols) {
 		return id;
 	});
 
-	const conn = getConnection();
-	const feeds = await conn.getLatestPriceFeeds(ids);
+	const client = getClient();
+	const update = await client.getLatestPriceUpdates(ids, { parsed: true });
+	const parsed = update?.parsed ?? [];
+
+	const idToSym = Object.fromEntries(syms.map((s, i) => [ids[i], s.toUpperCase()]));
 
 	const result = {};
-	for (let i = 0; i < syms.length; i++) {
-		const feed = feeds?.[i];
-		const p = feed?.getPriceUnchecked();
-		result[syms[i].toUpperCase()] = {
-			price: toFloat(p),
-			confidence: p ? toFloat({ price: p.conf, expo: p.expo }) : NaN,
-			publishTime: p?.publishTime ?? 0,
-		};
+	for (const entry of parsed) {
+		const id = entry.id.replace(/^0x/, '');
+		const sym = idToSym[id];
+		if (!sym) continue;
+		result[sym] = parseParsedPrice(entry);
+	}
+	// fill any missing syms with NaN
+	for (const sym of syms.map((s) => s.toUpperCase())) {
+		if (!(sym in result)) result[sym] = { price: NaN, confidence: NaN, publishTime: 0 };
 	}
 	return result;
 }
@@ -85,11 +84,11 @@ export async function getPrice(symbol) {
 }
 
 /**
- * Register a real-time WebSocket price subscription.
+ * Register a real-time SSE price subscription.
  * Returns an unsubscribe function.
  *
  * @param {string[]} symbols
- * @param {(updates: Record<string, {price: number, confidence: number}>) => void} onUpdate
+ * @param {(updates: Record<string, {price: number, confidence: number, publishTime: number}>) => void} onUpdate
  * @returns {() => void} unsubscribe
  */
 export function subscribePrices(symbols, onUpdate) {
@@ -100,16 +99,31 @@ export function subscribePrices(symbols, onUpdate) {
 	});
 
 	const idToSymbol = Object.fromEntries(symbols.map((s, i) => [ids[i], s.toUpperCase()]));
-	const conn = getConnection();
+	const client = getClient();
 
-	conn.subscribePriceFeedUpdates(ids, (feed) => {
-		const id = feed.id.replace(/^0x/, '');
-		const sym = idToSymbol[id];
-		if (!sym) return;
-		const p = feed.getPriceUnchecked();
-		const confidence = p ? toFloat({ price: p.conf, expo: p.expo }) : NaN;
-		onUpdate({ [sym]: { price: toFloat(p), confidence, publishTime: p?.publishTime ?? 0 } });
+	let eventSource = null;
+
+	client.getPriceUpdatesStream(ids, { parsed: true }).then((es) => {
+		eventSource = es;
+		es.onmessage = (event) => {
+			try {
+				const data = JSON.parse(event.data);
+				const parsed = data?.parsed ?? [];
+				const updates = {};
+				for (const entry of parsed) {
+					const id = entry.id.replace(/^0x/, '');
+					const sym = idToSymbol[id];
+					if (!sym) continue;
+					updates[sym] = parseParsedPrice(entry);
+				}
+				if (Object.keys(updates).length > 0) onUpdate(updates);
+			} catch {
+				// ignore parse errors
+			}
+		};
 	});
 
-	return () => conn.unsubscribePriceFeedUpdates(ids);
+	return () => {
+		if (eventSource) eventSource.close();
+	};
 }
