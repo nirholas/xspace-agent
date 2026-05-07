@@ -88,7 +88,7 @@ window.addEventListener('popstate', render);
 
 async function loadCategories() {
 	try {
-		const r = await fetch(`${API}/categories`);
+		const r = await fetch(`${API}/marketplace/categories`);
 		const j = await r.json();
 		renderCategories(j.data);
 	} catch (err) {
@@ -152,7 +152,7 @@ async function loadList(reset = false) {
 		els.grid.innerHTML = '<div class="market-empty">Loading…</div>';
 	}
 	try {
-		const url = new URL(`${API}/marketplace`, location.origin);
+		const url = new URL(`${API}/marketplace/agents`, location.origin);
 		if (state.category) url.searchParams.set('category', state.category);
 		if (state.q) url.searchParams.set('q', state.q);
 		if (state.sort) url.searchParams.set('sort', state.sort);
@@ -549,7 +549,7 @@ function bindSubmit() {
 
 		try {
 			errorEl.hidden = true;
-			const r = await fetch(`${API}/agents`, {
+			const r = await fetch(`${API}/marketplace/agents`, {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				credentials: 'include',

@@ -750,8 +750,8 @@
 		</main>
 
 		<script>
-			// Scroll reveal — use .home-parallax as root so IntersectionObserver
-			// fires against the perspective scroll container, not the window.
+			// Scroll reveal — use viewport (root: null) so IntersectionObserver
+			// avoids the perspective transform on .home-parallax breaking intersection math.
 			(function () {
 				const root = document.querySelector('.home-parallax');
 				const els = document.querySelectorAll('.h-reveal');
@@ -764,7 +764,7 @@
 							}
 						});
 					},
-					{ root, threshold: 0.12, rootMargin: '0px 0px -50px 0px' },
+					{ root: null, threshold: 0.12, rootMargin: '0px 0px -50px 0px' },
 				);
 				els.forEach((el) => {
 					const siblings = Array.from(el.parentElement.querySelectorAll('.h-reveal'));
