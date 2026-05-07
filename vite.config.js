@@ -87,7 +87,7 @@ const appConfig = {
 					'/agents/': resolve(root, 'public/agents/index.html'),
 					'/create': resolve(root, 'create.html'),
 					'/dashboard': resolve(root, 'public/dashboard/index.html'),
-					'/studio': resolve(root, 'public/studio/index.html'),
+					'/studio': resolve(root, 'widget-studio.html'),
 					'/widgets': resolve(root, 'public/widgets-gallery/index.html'),
 					'/docs/widgets': resolve(root, 'public/docs-widgets.html'),
 					'/cz': resolve(root, 'public/cz/index.html'),
