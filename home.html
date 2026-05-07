@@ -859,7 +859,7 @@
 					scrollProgress = 0;
 				const BASE_THETA = -45,
 					BASE_PHI = 80,
-					BASE_R = 14;
+					BASE_R = 20;
 				let curTheta = BASE_THETA,
 					curPhi = BASE_PHI,
 					curR = BASE_R;
@@ -951,6 +951,17 @@
 					viewer
 						.loadModel('/avatars/cz.glb', { autoPlay: false })
 						.then(async () => {
+							/* Scale up ring geometry so it fills the canvas */
+							viewer.model.traverse((node) => {
+								if (node.isMesh || node.isGroup) {
+									const n = node.name.toLowerCase();
+									if (n.includes('ring') || n.includes('circle') || n.includes('halo') || n.includes('orbit') || n.includes('arc')) {
+										node.scale.setScalar(2.5);
+									}
+								}
+								console.log('[cz node]', node.name, node.type);
+							});
+							viewer._modelFocusY = 1.1;
 							viewer.setOrbit(curTheta, curPhi, curR);
 							orbitActive = true;
 							/* fetch + start the falling clip before revealing — no T-pose flash */
