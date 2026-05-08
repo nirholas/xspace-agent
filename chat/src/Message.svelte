@@ -210,11 +210,7 @@
 				}}
 				class="shrink-0 rounded-md md:rounded-[6px] {message.role === 'assistant' && hasLogo && isLatestAssistant
 					? 'flex w-[140px] h-[280px]'
-					: 'flex h-8 w-8 md:h-9 md:w-9'} {message.role === 'system'
-					? 'border border-teal-200 bg-teal-100'
-					: message.role === 'assistant' && !message.agent && !(hasLogo && isLatestAssistant)
-						? 'border border-teal-200 bg-teal-100 pb-px'
-						: ''}"
+					: 'flex h-8 w-8 md:h-9 md:w-9'}"
 			>
 				{#if message.role === 'assistant' && hasLogo && isLatestAssistant}
 					<span class="w-full h-full overflow-hidden inline-block shrink-0 rounded-[inherit]">
