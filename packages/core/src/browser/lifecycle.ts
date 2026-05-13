@@ -10,6 +10,7 @@ import * as spaceUI from './space-ui'
 import type { SpaceUIOptions } from './space-ui'
 import { injectAudioHooks } from '../audio/bridge'
 import { SelectorEngine } from './selector-engine'
+import type { SelectorFallbackEvent } from './selector-engine'
 import { DOMObserver } from './observer'
 import { SELECTOR_DEFINITIONS } from './selectors'
 import { BrowserConnectionError } from '../errors'
@@ -18,6 +19,7 @@ import { getLogger } from '../logger'
 export interface BrowserLifecycleEvents {
   status: (status: string) => void
   error: (error: Error) => void
+  selectorFallback: (event: SelectorFallbackEvent) => void
 }
 
 export class BrowserLifecycle {
@@ -36,6 +38,7 @@ export class BrowserLifecycle {
     this.browserConfig = browserConfig
     this.authConfig = authConfig
     this.selectorEngine = new SelectorEngine(SELECTOR_DEFINITIONS)
+    this.selectorEngine.onFallback((evt) => this.emitter.emit('selectorFallback', evt))
   }
 
   get isConnectMode(): boolean {

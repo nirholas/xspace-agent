@@ -112,13 +112,15 @@ describe('/tts/:id/stream — validation', () => {
 
 describe('/tts/:id/stream — rate limit', () => {
   function mockOkStream() {
-    installMockFetch([
-      ['POST', EL_URL_RE, {
-        ok: true,
-        status: 200,
-        body: streamFromChunks([Buffer.from('audio')]),
-      }],
-    ])
+    // Each fetch call must get a FRESH ReadableStream — a stream can only have one reader.
+    global.fetch = async () => ({
+      ok: true,
+      status: 200,
+      body: streamFromChunks([Buffer.from('audio')]),
+      text: async () => '',
+      json: async () => ({}),
+      headers: { get: () => null },
+    })
   }
 
   it('first 3 requests succeed, 4th gets 429', async () => {

@@ -1,9 +1,23 @@
+# Operator personalities (user-specific, not tracked — copy from personalities.example.json)
+personalities.json
+
 # Custom personalities (user-created, not tracked)
 personalities/custom/*.json
 
 # Cookie files (contain auth tokens — never commit)
 *.cookies.json
 .cookies.json
+
+# Operator registry — contains hashed keys, never commit
+operators.json
+operators.json.tmp
+
+# PulseAudio client map — operator-specific, lives on the VM
+pulse.config.json
+
+# Debug screenshots
+debug-screenshots/
+*.png
 
 # Logs
 logs

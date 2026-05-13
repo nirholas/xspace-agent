@@ -58,6 +58,46 @@ export function createAuthMiddleware(apiKey: string) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Legacy-compatible auth middleware (matches server.js requireAuth semantics)
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract the API key from a request using the same precedence as legacy
+ * server.js: Bearer → X-API-Key → ?key= → ?apiKey= → body.key.
+ * Exported so static-gate.ts can reuse it without a second import chain.
+ */
+export function extractLegacyKey(req: Request): string | null {
+  const auth = req.headers.authorization
+  if (auth && /^Bearer\s+/i.test(auth)) return auth.replace(/^Bearer\s+/i, '').trim()
+  const x = req.headers['x-api-key'] as string
+  if (x) return x.trim()
+  if (typeof req.query.key === 'string') return req.query.key
+  if (typeof req.query.apiKey === 'string') return req.query.apiKey
+  if (req.body && typeof req.body.key === 'string') return req.body.key
+  return null
+}
+
+/**
+ * API-endpoint auth middleware with legacy `?key=` support.
+ * Same semantics as server.js `requireAuth` minus the HTML login page
+ * (which is handled separately by static-gate.ts for operator pages).
+ *
+ * When apiKey is empty (auth disabled) all requests pass through.
+ */
+export function createLegacyAuthMiddleware(apiKey: string) {
+  const required = apiKey.length > 0
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!required) return next()
+    const provided = extractLegacyKey(req)
+    if (provided && timingSafeApiKeyCompare(provided, apiKey)) return next()
+    res.status(401).json({
+      error: 'unauthorized',
+      hint: 'include Authorization: Bearer <ADMIN_API_KEY>, X-API-Key, or ?key=',
+    })
+  }
+}
+
 /**
  * Socket.IO authentication middleware.
  * Clients must pass their API key in `socket.handshake.auth.apiKey`

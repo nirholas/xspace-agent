@@ -196,6 +196,7 @@ export class XSpaceAgent extends EventEmitter {
       if (s === 'logged-in') this.machine.send({ type: 'LOGIN_SUCCESS' })
     })
     this.browserLifecycle.on('error', (err) => this.emit('error', err))
+    this.browserLifecycle.on('selectorFallback', (evt) => this.emit('selectorFallback', evt))
 
     // Conversation
     this.conversation = new ConversationManager({

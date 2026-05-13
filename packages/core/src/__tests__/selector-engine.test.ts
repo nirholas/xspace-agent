@@ -172,6 +172,54 @@ describe('SelectorEngine', () => {
     })
   })
 
+  describe('onFallback()', () => {
+    it('fires when a non-primary strategy wins', async () => {
+      const page = createMockPage({
+        'button[aria-label*="Join"]': true, // priority 2, not primary
+      })
+
+      const events: any[] = []
+      engine.onFallback((evt) => events.push(evt))
+
+      await engine.find(page, 'join-button')
+
+      expect(events).toHaveLength(1)
+      expect(events[0].action).toBe('join-button')
+      expect(events[0].primaryFailed).toBe(true)
+      expect(events[0].successfulStrategy).toBe('aria')
+      expect(typeof events[0].timestamp).toBe('number')
+    })
+
+    it('does NOT fire when the primary strategy wins', async () => {
+      const page = createMockPage({
+        '[data-testid="SpaceJoinButton"]': true, // priority 1 — primary
+      })
+
+      const events: any[] = []
+      engine.onFallback((evt) => events.push(evt))
+
+      await engine.find(page, 'join-button')
+
+      expect(events).toHaveLength(0)
+    })
+
+    it('supports multiple listeners', async () => {
+      const page = createMockPage({
+        'button[aria-label*="Join"]': true,
+      })
+
+      const a: any[] = []
+      const b: any[] = []
+      engine.onFallback((e) => a.push(e))
+      engine.onFallback((e) => b.push(e))
+
+      await engine.find(page, 'join-button')
+
+      expect(a).toHaveLength(1)
+      expect(b).toHaveLength(1)
+    })
+  })
+
   describe('override()', () => {
     it('sets a manual override that takes priority', async () => {
       const page = createMockPage({

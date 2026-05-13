@@ -1,6 +1,6 @@
 # Spec 1 — Selector resilience for X UI automation
 
-You are hardening the X-UI automation in `nirholas/xspace-agent`. Right now `automation/x-join-only.js`, `unmute-only.js`, and `unmute-dual.js` find buttons by scanning all `button`/`[role=button]` elements and matching on lowercased `aria-label` + `textContent`. This works but is **fragile** — when X renames a button or restructures the DOM, every automation script breaks at once and the system fails mid-Space.
+You are hardening the X-UI automation in `nirholas/xspace-agent`. Right now `automation/x-join-only.js`, `unmute-only.js`, and `x-spaces/dual/unmute.js` find buttons by scanning all `button`/`[role=button]` elements and matching on lowercased `aria-label` + `textContent`. This works but is **fragile** — when X renames a button or restructures the DOM, every automation script breaks at once and the system fails mid-Space.
 
 Build a robust `SelectorEngine` that abstracts the matching logic, supports multiple fallback strategies, captures debug evidence on failure, and exposes a dry-run mode.
 
@@ -9,14 +9,14 @@ Build a robust `SelectorEngine` that abstracts the matching logic, supports mult
 ```
 automation/
   vm-automation.js         single-account driver
-  vm-automation-dual.js    dual-account driver
+  x-spaces/dual/automation.js    dual-account driver
   x-join-only.js           X-tab-only join (no agent connect)
   unmute-only.js           clicks unmute on the X tab
-  unmute-dual.js           clicks unmute on both X tabs
+  x-spaces/dual/unmute.js  clicks unmute on both X tabs
   reconnect-agent.js       reloads agent tab + clicks Connect
-  open-agent2.js           opens agent2 in a new tab
-  kick-loop.js             fires response.create on agent1
-  update-prompts.js        session.update on both agents
+  x-spaces/dual/open-agent2.js    opens agent2 in a new tab
+  x-spaces/dual/kick-loop.js      fires response.create on agent1
+  x-spaces/dual/update-prompts.js session.update on both agents
 ```
 
 Each script imports `puppeteer-core`, connects via CDP, has its own inline `click(page, needle)` helper that polls every 700-1500ms for buttons containing the needle text. This is duplicated 7 times across the codebase.
@@ -104,10 +104,10 @@ Implementation hint: import `puppeteer-core`, connect to the X Chrome (`http://1
 
 - `automation/x-join-only.js` — use `SelectorEngine.recipes.startListening` then `requestToSpeak`
 - `automation/vm-automation.js` — same
-- `automation/vm-automation-dual.js` — same (per account)
-- `automation/unmute-only.js`, `unmute-dual.js` — use `SelectorEngine.recipes.unmute`
+- `x-spaces/dual/automation.js` — same (per account)
+- `automation/unmute-only.js`, `x-spaces/dual/unmute.js` — use `SelectorEngine.recipes.unmute`
 - `automation/reconnect-agent.js` — use a new recipe `agentConnectButton` (matches "connect" on the localhost agent page)
-- `automation/open-agent2.js` — same recipe as above
+- `x-spaces/dual/open-agent2.js` — same recipe as above
 
 After refactor each script should be ≤40 lines.
 

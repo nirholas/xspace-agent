@@ -24,7 +24,10 @@ import {
 } from 'xspace-agent'
 import { randomUUID } from 'crypto'
 
-import { createAuthMiddleware, socketAuthMiddleware } from './middleware/auth'
+import { createAuthMiddleware, createLegacyAuthMiddleware, socketAuthMiddleware } from './middleware/auth'
+import { createTTSRouter } from './routes/tts'
+import { createStaticGateMiddleware, createStaticGateRouter } from './routes/static-gate'
+import { registerVoiceSocketHandler } from './socket/voice'
 import { validateSocketEvent, SpaceUrlSchema, validate } from './middleware/validation'
 import { RateLimiter, rateLimitMiddleware } from './middleware/rate-limit'
 import { requestIdMiddleware } from './middleware/request-id'
@@ -214,7 +217,15 @@ export function createServer(options: ServerOptions = {}): XSpaceServer {
   app.use(rateLimitMiddleware(apiLimiter))
 
   // --- Static files & body parsing ---
-  app.use(express.static(path.join(__dirname, '..', 'public')))
+  // Static gate must run before express.static so gated HTML is never served raw.
+  const publicDir = path.join(__dirname, '..', 'public')
+  app.use(createStaticGateMiddleware(publicDir, ADMIN_API_KEY))
+  app.use(express.static(publicDir, {
+    index: false,
+    setHeaders: (res, p) => {
+      if (/\.html$/i.test(p)) res.setHeader('Cache-Control', 'no-store')
+    },
+  }))
   app.use(express.json())
 
   // -------------------------------------------------------------------------
@@ -312,11 +323,19 @@ export function createServer(options: ServerOptions = {}): XSpaceServer {
     app.use('/api/deployments', createAuthMiddleware(ADMIN_API_KEY))
     app.use('/api/builder', createAuthMiddleware(ADMIN_API_KEY))
     app.use('/api/settings', createAuthMiddleware(ADMIN_API_KEY))
+    // TTS/voices use legacy ?key= auth so they stay compatible with browser pages.
+    app.use('/tts', createLegacyAuthMiddleware(ADMIN_API_KEY))
+    app.use('/voices', createLegacyAuthMiddleware(ADMIN_API_KEY))
   }
 
   app.get('/', (_req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')))
-  app.get('/admin', (_req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'admin.html')))
-  app.get('/builder', (_req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'builder.html')))
+
+  // Named operator routes with auth + key injection (replaces bare sendFile routes).
+  // /dashboard is also handled here (semi-public: key injected when provided).
+  app.use(createStaticGateRouter(publicDir, ADMIN_API_KEY))
+
+  // TTS streaming proxy + voice catalog (ElevenLabs browser-page mode).
+  app.use(createTTSRouter(io))
 
   app.get('/config', (_req, res) =>
     res.json({
@@ -1052,6 +1071,9 @@ export function createServer(options: ServerOptions = {}): XSpaceServer {
         socket.emit('xSpacesError', { error: `Failed to speak: ${redactSecrets(err.message)}` })
       }
     })
+
+    // ElevenLabs voice swap — lets operator change voices without redeploy.
+    registerVoiceSocketHandler(socket, spaceNS, log)
 
     socket.on('disconnect', () => {
       log.info({ socketId: socket.id }, 'client disconnected')

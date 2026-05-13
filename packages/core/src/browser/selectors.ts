@@ -29,6 +29,8 @@ export const SELECTOR_DEFINITIONS: SelectorDefinition[] = [
     description: 'Next button on login flow',
     strategies: [
       { name: 'testid', selector: '[data-testid="LoginForm_Forward_Button"]', priority: 1 },
+      { name: 'aria-next', selector: 'button[aria-label="Next"]', priority: 2 },
+      { name: 'role-button-next', selector: '[role="button"][data-testid*="Forward"]', priority: 3 },
       { name: 'role-text', selector: '[role="button"] span', priority: 5 },
     ],
     textMatch: 'Next',
@@ -47,6 +49,9 @@ export const SELECTOR_DEFINITIONS: SelectorDefinition[] = [
     description: 'Login/submit button on login page',
     strategies: [
       { name: 'testid', selector: '[data-testid="LoginForm_Login_Button"]', priority: 1 },
+      { name: 'aria-login', selector: 'button[aria-label="Log in"]', priority: 2 },
+      { name: 'role-login', selector: '[role="button"][data-testid*="Login"]', priority: 3 },
+      { name: 'type-submit', selector: 'button[type="submit"]', priority: 4 },
     ],
     textMatch: 'Log in',
     ariaMatch: 'Log in',
@@ -56,6 +61,9 @@ export const SELECTOR_DEFINITIONS: SelectorDefinition[] = [
     description: 'Email/phone verification input',
     strategies: [
       { name: 'testid', selector: 'input[data-testid="ocfEnterTextTextInput"]', priority: 1 },
+      { name: 'placeholder-email', selector: 'input[placeholder*="email" i]', priority: 2 },
+      { name: 'placeholder-phone', selector: 'input[placeholder*="phone" i]', priority: 3 },
+      { name: 'type-text-second', selector: 'input[type="text"]:not([autocomplete="username"])', priority: 4 },
     ],
   },
   {
@@ -63,6 +71,8 @@ export const SELECTOR_DEFINITIONS: SelectorDefinition[] = [
     description: 'Next button on verification step',
     strategies: [
       { name: 'testid', selector: '[data-testid="ocfEnterTextNextButton"]', priority: 1 },
+      { name: 'role-button-next', selector: '[role="button"][data-testid*="Next"]', priority: 2 },
+      { name: 'aria-next', selector: 'button[aria-label="Next"]', priority: 3 },
     ],
     textMatch: 'Next',
   },
@@ -74,6 +84,8 @@ export const SELECTOR_DEFINITIONS: SelectorDefinition[] = [
     description: 'Primary column on home page confirming login',
     strategies: [
       { name: 'testid', selector: '[data-testid="primaryColumn"]', priority: 1 },
+      { name: 'main-content', selector: 'main[role="main"]', priority: 2 },
+      { name: 'home-nav', selector: 'nav[aria-label*="Home" i]', priority: 3 },
     ],
   },
 
@@ -147,7 +159,11 @@ export const SELECTOR_DEFINITIONS: SelectorDefinition[] = [
     description: 'Button to mute microphone in Space',
     strategies: [
       { name: 'testid', selector: '[data-testid="SpaceMuteButton"]', priority: 1 },
-      { name: 'aria', selector: 'button[aria-label*="Mute"]', priority: 2 },
+      { name: 'aria-mute-exact', selector: 'button[aria-label="Mute"]', priority: 2 },
+      { name: 'aria-mute-i', selector: 'button[aria-label*="Mute"]', priority: 3 },
+      { name: 'aria-turn-off-mic', selector: 'button[aria-label*="Turn off microphone"]', priority: 4 },
+      { name: 'aria-mic-on', selector: 'button[aria-label*="microphone is on"]', priority: 5 },
+      { name: 'div-role-mute', selector: 'div[role="button"][aria-label*="Mute"]', priority: 6 },
     ],
     textMatch: 'Mute',
     ariaMatch: 'Mute',
@@ -195,6 +211,9 @@ export const SELECTOR_DEFINITIONS: SelectorDefinition[] = [
     description: 'Speaker avatars in the Space',
     strategies: [
       { name: 'testid', selector: '[data-testid="SpaceSpeakerAvatar"]', priority: 1 },
+      { name: 'testid-speaker-card', selector: '[data-testid="SpaceSpeakerCard"]', priority: 2 },
+      { name: 'aria-speaker', selector: '[aria-label*="speaker" i]', priority: 3 },
+      { name: 'dock-avatars', selector: '[data-testid="SpaceDockExpanded"] img[src*="profile_images"]', priority: 4 },
     ],
   },
 
@@ -205,6 +224,9 @@ export const SELECTOR_DEFINITIONS: SelectorDefinition[] = [
     description: 'Indicator that the Space has ended',
     strategies: [
       { name: 'testid', selector: '[data-testid="spaceEnded"]', priority: 1 },
+      { name: 'testid-ended-banner', selector: '[data-testid="SpaceEndedBanner"]', priority: 2 },
+      { name: 'aria-ended', selector: '[aria-label*="ended" i]', priority: 3 },
+      { name: 'text-ended', selector: 'span[dir="ltr"]', priority: 4 },
     ],
     textMatch: 'has ended',
   },
@@ -213,6 +235,9 @@ export const SELECTOR_DEFINITIONS: SelectorDefinition[] = [
     description: 'Indicator that the Space is currently live',
     strategies: [
       { name: 'testid', selector: '[data-testid="SpaceLiveIndicator"]', priority: 1 },
+      { name: 'testid-live-badge', selector: '[data-testid="SpaceLiveBadge"]', priority: 2 },
+      { name: 'aria-live', selector: '[aria-label*="LIVE" i]', priority: 3 },
+      { name: 'live-span', selector: 'span[dir="ltr"]', priority: 4 },
     ],
     textMatch: 'LIVE',
   },

@@ -647,6 +647,7 @@ export interface AgentEvents {
   response: (data: ResponseEvent) => void;
   status: (status: AgentStatus) => void;
   error: (error: Error) => void;
+  selectorFallback: (data: import('./browser/selector-engine').SelectorFallbackEvent) => void;
   'speaker-joined': (data: SpeakerEvent) => void;
   'speaker-left': (data: SpeakerEvent) => void;
   'space-ended': () => void;

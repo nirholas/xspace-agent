@@ -8,7 +8,7 @@ Build a **persona library** — a bundled set of preset personalities with curat
 
 `server.js` has `spacePrompts = { 0: "...", 1: "..." }` and `spaceVoices = { 0: "marin", 1: "cedar" }` as in-memory state, set from env vars on startup.
 
-`automation/update-prompts.js` already implements live `session.update` over the data channel — extend that pattern.
+`x-spaces/dual/update-prompts.js` already implements live `session.update` over the data channel — extend that pattern.
 
 ## Persona JSON shape
 

@@ -44,6 +44,13 @@ export interface SelectorFailureEntry {
   timestamp: number;
 }
 
+export interface SelectorFallbackEvent {
+  action: string;
+  primaryFailed: boolean;
+  successfulStrategy: string;
+  timestamp: number;
+}
+
 // ---------------------------------------------------------------------------
 // Engine
 // ---------------------------------------------------------------------------
@@ -52,6 +59,7 @@ export class SelectorEngine {
   private definitions: Map<string, SelectorDefinition> = new Map();
   private successCache: Map<string, string> = new Map();
   private failureLog: SelectorFailureEntry[] = [];
+  private fallbackListeners: Array<(event: SelectorFallbackEvent) => void> = [];
 
   constructor(definitions: SelectorDefinition[]) {
     for (const def of definitions) {
@@ -86,11 +94,21 @@ export class SelectorEngine {
 
     // 2. Strategy chain
     const sorted = [...def.strategies].sort((a, b) => a.priority - b.priority);
-    for (const strategy of sorted) {
+    for (let i = 0; i < sorted.length; i++) {
+      const strategy = sorted[i];
       try {
         const el = await this.safeQuery(page, strategy.selector);
         if (el) {
           this.successCache.set(name, strategy.selector);
+          if (i > 0) {
+            const evt: SelectorFallbackEvent = {
+              action: name,
+              primaryFailed: true,
+              successfulStrategy: strategy.name,
+              timestamp: Date.now(),
+            };
+            for (const listener of this.fallbackListeners) listener(evt);
+          }
           return el;
         }
       } catch {
@@ -117,6 +135,11 @@ export class SelectorEngine {
     // All strategies exhausted
     this.failureLog.push({ name, selector: 'ALL_STRATEGIES', timestamp: Date.now() });
     return null;
+  }
+
+  /** Register a listener that fires whenever a non-primary strategy wins. */
+  onFallback(listener: (event: SelectorFallbackEvent) => void): void {
+    this.fallbackListeners.push(listener);
   }
 
   /** Manually override the cached selector for a given name. */

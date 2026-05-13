@@ -2,6 +2,13 @@
 
 **Kill every terminal** — always use `isBackground: true`, then kill the terminal after output is captured
 
+## Git Identity
+Always commit and push as nirholas. Use these flags on every `git commit`:
+```
+git -c user.name="nirholas" -c user.email="22895867+nirholas@users.noreply.github.com" commit ...
+```
+Never use a different author. The Co-Authored-By trailer should also use this identity.
+
 ## What This Project Is
 
 **xspace-agent** is a TypeScript SDK and CLI that enables AI agents to autonomously join, listen, and speak in X (Twitter) Spaces. It supports multiple LLM providers (OpenAI, Claude, Groq), speech-to-text (Whisper), text-to-speech (ElevenLabs, OpenAI TTS), and multi-agent coordination — all driven by Puppeteer browser automation against the live X Spaces UI.

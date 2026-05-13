@@ -1,0 +1,10 @@
+{
+  "_comment": "Copy to pulse.config.json on the VM. Maps pactl application.name values to human-readable agent labels shown in the dashboard route table.",
+  "clientMap": {
+    "Chromium":        "agent-chrome",
+    "Chrome":          "agent-chrome",
+    "Google Chrome":   "agent-chrome",
+    "firefox":         "x-tab-firefox",
+    "WEBRTCVOICE":     "webrtc"
+  }
+}

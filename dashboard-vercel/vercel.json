@@ -1,0 +1,8 @@
+{
+  "buildCommand": "node inject-api.js",
+  "outputDirectory": "dist",
+  "framework": null,
+  "rewrites": [
+    { "source": "/", "destination": "/dashboard.html" }
+  ]
+}

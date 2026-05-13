@@ -91,11 +91,20 @@ class AgentCommon {
 
   markDisconnected() {
     this.isConnected = false
-    this.connIndicator.classList.remove("connected")
+    this.connIndicator.className = "status-indicator"
     this.connStatus.textContent = "Disconnected"
     this.socket.emit("agentDisconnect", { agentId: this.AGENT_ID })
     this.connectBtn.textContent = "Connect"
     this.connectBtn.disabled = false
+  }
+
+  markReconnecting(attempt) {
+    this.isConnected = false
+    this.connIndicator.className = "status-indicator reconnecting"
+    this.connStatus.textContent = "Reconnecting..."
+    this.connectBtn.textContent = `Reconnecting (attempt ${attempt})...`
+    this.connectBtn.disabled = true
+    this.socket.emit("agentReconnecting", { agentId: this.AGENT_ID, attempt })
   }
 
   setupAudioAnalysis(stream) {

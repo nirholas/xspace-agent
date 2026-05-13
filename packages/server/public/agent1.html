@@ -127,12 +127,12 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/agent-common.js"></script>
-  <script src="/js/provider-openai-realtime.js"></script>
+  <script type="module" src="/js/provider-openai-realtime.js"></script>
   <script src="/js/provider-socket.js"></script>
   <script>
     window.AGENT_CONFIG = { agentId: 0, agentName: "Bob", sessionEndpoint: "/session/0" }
   </script>
-  <script src="/js/agent-loader.js"></script>
+  <script type="module" src="/js/agent-loader.js"></script>
 </body>
 </html>
 

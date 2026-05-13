@@ -45,6 +45,7 @@
     "security:audit": "npm audit --audit-level=high",
     "db:migrate": "pnpm -F xspace-agent run db:migrate",
     "db:seed": "pnpm -F xspace-agent run db:seed",
+    "operator": "node scripts/operator.js",
     "selectors:audit": "node x-spaces/scripts/audit-selectors.js",
     "preflight": "node scripts/preflight.js",
     "prestart:legacy": "node scripts/preflight.js --skip pulse,cdp || true",

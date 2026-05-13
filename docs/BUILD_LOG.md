@@ -149,7 +149,7 @@ Symptom: the messages array stayed empty. `/state` showed both agents connected 
 
 Cause: GA Realtime renamed `response.audio_transcript.delta`/`.done` → `response.output_audio_transcript.delta`/`.done`. The page only listened for the old name, so transcripts never accumulated, so `textComplete` never fired.
 
-Fix in `automation/patch-transcript-events.py`:
+Fix in `x-spaces/dual/patches/transcript-events.py`:
 
 ```js
 // before
@@ -167,13 +167,13 @@ After this patch, banter worked. `/state` messages array filled up with alternat
 
 After the transcript fix, agent1 → agent2 forwarding fired but agent2 didn't actually generate a response. Cause: in the original `ai-agents-x-space` repo, only agent1.html's `textToAgent` handler dispatches a `conversation.item.create` + `response.create` to the data channel. agent2.html's handler was just a UI log (`log("User message: ..."); // (Sam will respond)`).
 
-Fix in `automation/patch-agent2-respond.py`: copy agent1's handler verbatim into agent2.html (with `if (AGENT_ID !== 0) return` removed, since agent2 has `AGENT_ID = 1`).
+Fix in `x-spaces/dual/patches/agent2-respond.py`: copy agent1's handler verbatim into agent2.html (with `if (AGENT_ID !== 0) return` removed, since agent2 has `AGENT_ID = 1`).
 
 ## Phase 11 — turn-gating to prevent overlap
 
 Even with both agents now triggering on `textToAgent`, occasionally one would start before the other finished. The server forwarder fired on a fixed 1.5s delay regardless of who was speaking.
 
-Fix in `automation/patch-turn-gating.py`: replaced the forwarder with a `sendWhenIdle` poll. Server only emits `textToAgent` once both `state.agents[sender].status === "idle"` and `state.agents[other].status === "idle"`. Polls every 1.5s up to 10 times, drops the turn if the floor never clears.
+Fix in `x-spaces/dual/patches/turn-gating.py`: replaced the forwarder with a `sendWhenIdle` poll. Server only emits `textToAgent` once both `state.agents[sender].status === "idle"` and `state.agents[other].status === "idle"`. Polls every 1.5s up to 10 times, drops the turn if the floor never clears.
 
 Status comes from each agent page emitting `statusChange` events to the server based on Web Audio API analysis of the agent's audio output: above the level threshold for ≥1 sample = "speaking", below threshold for ≥500ms = "idle".
 
@@ -255,7 +255,7 @@ PULSE_SINK=eplus_playback PULSE_SOURCE=x_eplus_mic \
                 --remote-debugging-port=9225 about:blank &
 ```
 
-Files: `vm-launch-dual.sh`, `automation/vm-automation-dual.js`, `automation/unmute-dual.js`. Second account's cookies in `automation/.env-eplus`.
+Files: `x-spaces/dual/launch.sh`, `x-spaces/dual/automation.js`, `x-spaces/dual/unmute.js`. Second account's cookies in `automation/.env-eplus`.
 
 ## Phase 17 — the dual-account overlap problem
 
@@ -318,16 +318,16 @@ sudo -u agent bash -c "cd /home/agent/automation && node unmute-only.js"
 # Dual-account (each agent broadcasts via its own account):
 sudo -u agent /home/agent/launch-dual.sh https://x.com/i/spaces/<id>
 # (host accepts BOTH requests on phone)
-sudo -u agent bash -c "cd /home/agent/automation && node unmute-dual.js"
+node x-spaces/dual/unmute.js
 
 # One-off broadcast (no Realtime, just TTS):
 sudo -u agent /home/agent/say.sh "anything you want spoken"
 
 # Live prompt change without restart
-sudo -u agent bash -c "cd /home/agent/automation && node update-prompts.js"
+node x-spaces/dual/update-prompts.js
 
 # Re-trigger the banter loop after silence
-sudo -u agent bash -c "cd /home/agent/automation && node kick-loop.js"
+node x-spaces/dual/kick-loop.js
 
 # Inspect what people in the Space are saying
 sudo -u agent bash -c "cd /home/agent/automation && node -e '...'"  # see troubleshooting.md

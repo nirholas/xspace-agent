@@ -92,6 +92,7 @@ vi.mock('../../../src/browser/selector-engine', () => {
     getDefinition = vi.fn()
     getSuccessCache = vi.fn().mockReturnValue(new Map())
     override = vi.fn()
+    onFallback = vi.fn()
     constructor(_defs?: any) { /* noop */ }
   }
   return { SelectorEngine: MockSelectorEngine }

@@ -17,7 +17,7 @@ and operator UX, then deploy hardening, then personality hot-swap and infra.
 
 | # | File | Why |
 |---|------|-----|
-| 01 | `01-multi-operator-auth.md` | Identity in the audit log, revoke without rotating the shared secret |
+| 01 | `01-multi-operator-auth.md` | ✅ Identity in the audit log, revoke without rotating the shared secret |
 | 02 | `02-listen-mode.md` | Operator hears what the Space hears — biggest UX win for one chat |
 | 03 | `03-turn-queue-and-latency.md` | Render `turnQueue`; surface TTFT + total-turn timings |
 | 04 | `04-silence-and-route-health.md` | Parse `pactl` into a route table; alarm when meters silent during `speaking` |
