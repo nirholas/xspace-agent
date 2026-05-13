@@ -32,6 +32,7 @@
     "lint:fix": "npx eslint src/ --fix",
     "typecheck": "npx tsc --noEmit && npx tsc -p tsconfig.client.json --noEmit",
     "test": "cd packages/core && npx --no-install vitest run",
+    "test:client": "vitest run -c vitest.config.ts",
     "format": "npx prettier --write \"src/**/*.ts\"",
     "format:check": "npx prettier --check \"src/**/*.ts\"",
     "docker:build": "docker build -t xspace-agent .",
@@ -43,7 +44,17 @@
     "security": "npm audit --audit-level=high",
     "security:audit": "npm audit --audit-level=high",
     "db:migrate": "pnpm -F xspace-agent run db:migrate",
-    "db:seed": "pnpm -F xspace-agent run db:seed"
+    "db:seed": "pnpm -F xspace-agent run db:seed",
+    "selectors:audit": "node x-spaces/scripts/audit-selectors.js",
+    "preflight": "node scripts/preflight.js",
+    "prestart:legacy": "node scripts/preflight.js --skip pulse,cdp || true",
+    "test:server": "vitest run --config vitest.config.server.mjs",
+    "test:voice": "pnpm test:server",
+    "vm-bringup": "node scripts/vm-bringup.js",
+    "reconnect-agent": "node scripts/reconnect-agent.js",
+    "unmute-greet": "node scripts/unmute-and-greet.js",
+    "unmute": "node scripts/unmute-only.js",
+    "x-join": "node scripts/x-join-only.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

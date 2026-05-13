@@ -1,11 +1,25 @@
-// Finds and clicks the unmute/start-speaking button in the X Space tab.
-const puppeteer = require('puppeteer-core')
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+#!/usr/bin/env node
+// Finds and clicks the Unmute / Start Speaking button in the X Space tab.
+// Use when the greet has already been sent or you want to unmute without triggering one.
+//
+// Usage: node scripts/unmute-only.js
+//
+// Env: X_CDP — CDP URL for X Chrome (default http://127.0.0.1:9223)
 
+const puppeteer = require('puppeteer-core')
+
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log('Usage: node scripts/unmute-only.js')
+  console.log('Env: X_CDP (default http://127.0.0.1:9223)')
+  process.exit(0)
+}
+
+const X_CDP = process.env.X_CDP || 'http://127.0.0.1:9223'
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const NEEDLES = ['unmute', 'turn on microphone', 'start speaking', 'turn on mic', 'speak now']
 
 ;(async () => {
-  const xb = await puppeteer.connect({ browserURL: 'http://127.0.0.1:9223', defaultViewport: null })
+  const xb = await puppeteer.connect({ browserURL: X_CDP, defaultViewport: null })
   const xPage = (await xb.pages()).find((p) => p.url().includes('/spaces/')) || (await xb.pages())[0]
   console.log('[unmute] url:', xPage.url())
 
@@ -31,7 +45,7 @@ const NEEDLES = ['unmute', 'turn on microphone', 'start speaking', 'turn on mic'
     if (r.ok) { console.log('[unmute] clicked:', r.n, '|', r.label); xb.disconnect(); return }
     await sleep(1500)
   }
-  console.log('[unmute] not found; dumping labels:')
+  console.log('[unmute] not found after 60s; dumping labels:')
   const labels = await xPage.evaluate(() =>
     Array.from(document.querySelectorAll('button, [role="button"]'))
       .slice(0, 30)

@@ -91,11 +91,12 @@ for port in 9222 9223 9224 9225; do
 done
 
 # 6. Run dual automation
-set -a; . "${HOME}/automation/.env"; . "${HOME}/automation/.env-eplus"; set +a
-cd "${HOME}/automation"
-node vm-automation-dual.js "$SPACE_URL" 2>&1 | tee -a "$LOG"
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+set -a; . "${REPO_ROOT}/.env"; [ -f "${REPO_ROOT}/.env-eplus" ] && . "${REPO_ROOT}/.env-eplus"; set +a
+cd "${REPO_ROOT}"
+node x-spaces/dual/automation.js "$SPACE_URL" 2>&1 | tee -a "$LOG"
 
 echo "=== dual launch DONE ===" | tee -a "$LOG"
 echo
 echo "Now accept BOTH speaker requests on your phone (one for @swarminged, one for @eplus)."
-echo "Then run:  cd ${HOME}/automation && node unmute-dual.js"
+echo "Then run:  node x-spaces/dual/unmute.js"

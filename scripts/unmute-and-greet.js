@@ -1,23 +1,31 @@
-// User has accepted speaker request on phone.
-// Steps: navigate X tab back to the Space if drifted -> poll for unmute -> click ->
-// then fire a response.create on the agent data channel so it greets in the Space.
+#!/usr/bin/env node
+// After the host accepts the speaker request on their phone, this script:
+//   1. Navigates the X tab back to the Space if it has drifted.
+//   2. Polls for the "Unmute" / "Start Speaking" button and clicks it (90 s window).
+//   3. Triggers a greeting response.create on agent1's Realtime data channel.
+//
+// Usage: node scripts/unmute-and-greet.js <https://x.com/i/spaces/...>
+//
+// Env:
+//   X_CDP     — CDP URL for X Chrome   (default http://127.0.0.1:9223)
+//   AGENT_CDP — CDP URL for agent Chrome (default http://127.0.0.1:9222)
+
 const puppeteer = require('puppeteer-core')
 
 const SPACE_URL = process.argv[2]
 if (!SPACE_URL || !SPACE_URL.includes('x.com/i/spaces/')) {
-  console.error('usage: node unmute-and-greet.js <https://x.com/i/spaces/...>')
-  process.exit(1)
+  console.log('Usage: node scripts/unmute-and-greet.js <https://x.com/i/spaces/...>')
+  console.log('')
+  console.log('Env: X_CDP (default http://127.0.0.1:9223), AGENT_CDP (default http://127.0.0.1:9222)')
+  process.exit(SPACE_URL ? 1 : 0)
 }
+
+const X_CDP    = process.env.X_CDP    || 'http://127.0.0.1:9223'
+const AGENT_CDP = process.env.AGENT_CDP || 'http://127.0.0.1:9222'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-const UNMUTE_NEEDLES = [
-  'unmute',
-  'turn on microphone',
-  'start speaking',
-  'turn on mic',
-  'speak now',
-]
+const UNMUTE_NEEDLES = ['unmute', 'turn on microphone', 'start speaking', 'turn on mic', 'speak now']
 
 async function findAndClick(page, needles, timeoutMs) {
   const deadline = Date.now() + timeoutMs
@@ -46,7 +54,7 @@ async function findAndClick(page, needles, timeoutMs) {
 }
 
 ;(async () => {
-  const xb = await puppeteer.connect({ browserURL: 'http://127.0.0.1:9223', defaultViewport: null })
+  const xb = await puppeteer.connect({ browserURL: X_CDP, defaultViewport: null })
   let xPage = (await xb.pages()).find((p) => p.url().includes('/spaces/'))
   if (!xPage) {
     console.log('[unmute] X tab not on Space, re-navigating')
@@ -72,11 +80,10 @@ async function findAndClick(page, needles, timeoutMs) {
   console.log('[unmute] clicked:', r.n, '|', r.label)
   await sleep(1500)
 
-  // Trigger greeting from agent
-  const ab = await puppeteer.connect({ browserURL: 'http://127.0.0.1:9222', defaultViewport: null })
+  const ab = await puppeteer.connect({ browserURL: AGENT_CDP, defaultViewport: null })
   const agentPage = (await ab.pages()).find((p) => p.url().includes('/agent1'))
   if (!agentPage) {
-    console.error('[unmute] no agent page')
+    console.error('[unmute] no agent1 page found in agent Chrome')
     process.exit(3)
   }
   const sent = await agentPage.evaluate(() => {
