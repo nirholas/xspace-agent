@@ -8,7 +8,19 @@ class AgentCommon {
     this.AGENT_NAME = config.agentName
     this.SESSION_ENDPOINT = config.sessionEndpoint
 
-    this.socket = io(config.namespace || "/space")
+    // Auth: server injects window.AGENT_AUTH_KEY into operator pages when
+    // ADMIN_API_KEY is set. The key flows through Socket.IO handshake auth
+    // and as a ?key=… on the session-token fetch (the existing fetch() in the
+    // realtime provider does not set headers, so a query string is simpler).
+    this.AUTH_KEY = (typeof window !== "undefined" && window.AGENT_AUTH_KEY) || null
+    if (this.AUTH_KEY && !this.SESSION_ENDPOINT.includes("key=")) {
+      const sep = this.SESSION_ENDPOINT.includes("?") ? "&" : "?"
+      this.SESSION_ENDPOINT = this.SESSION_ENDPOINT + sep + "key=" + encodeURIComponent(this.AUTH_KEY)
+    }
+
+    this.socket = io(config.namespace || "/space", {
+      auth: this.AUTH_KEY ? { key: this.AUTH_KEY } : {}
+    })
     this.isConnected = false
     this.hasTurn = false
     this.currentMessageId = null

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Voice Agent Dashboard</title>
+  <link rel="stylesheet" href="/dashboard.css" />
+</head>
+<body>
+  <div id="login-overlay" class="login-overlay" hidden>
+    <form id="login-form" class="login-card">
+      <h1>Admin key required</h1>
+      <p class="muted small" id="login-msg">Enter <code>ADMIN_API_KEY</code> to unlock the dashboard.</p>
+      <input id="login-key" type="password" autocomplete="off" placeholder="paste key" autofocus />
+      <button type="submit">Unlock</button>
+      <p class="muted small">Stored in <code>sessionStorage</code> — cleared when this tab closes.</p>
+    </form>
+  </div>
+
+  <header class="topbar">
+    <div class="cluster">
+      <span id="conn-dot" class="dot offline" title="socket status"></span>
+      <span id="conn-label">connecting…</span>
+    </div>
+    <div class="cluster grow">
+      <span class="muted">Space:</span>
+      <a id="space-link" href="#" target="_blank" rel="noopener">—</a>
+    </div>
+    <div class="cluster">
+      <span class="muted">Floor:</span>
+      <span id="current-turn" class="badge muted">—</span>
+    </div>
+    <div class="cluster">
+      <span class="muted">Uptime:</span>
+      <span id="uptime" class="mono">—</span>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section id="agents" class="agents"></section>
+
+    <section class="transcript-pane">
+      <div class="pane-head">
+        <h2>Transcript</h2>
+        <label class="muted"><input type="checkbox" id="autoscroll" checked /> auto-scroll</label>
+      </div>
+      <div id="transcript" class="transcript"></div>
+    </section>
+
+    <section class="inject">
+      <input id="inject-text" type="text" placeholder="Inject a message into the conversation…" autocomplete="off" />
+      <input id="inject-from" type="text" placeholder="from (optional)" autocomplete="off" />
+      <button id="inject-send">send</button>
+    </section>
+
+    <section class="health">
+      <div class="pane-head">
+        <h2>Health</h2>
+        <button id="health-refresh" class="ghost">refresh</button>
+      </div>
+      <div class="health-row">
+        <div>
+          <div class="muted">Pulse sink-inputs / sources</div>
+          <pre id="pulse-out" class="mono small">—</pre>
+        </div>
+        <div>
+          <div class="muted">X browser tabs</div>
+          <pre id="xtab-out" class="mono small">—</pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <template id="agent-card-tpl">
+    <article class="agent-card" data-agent-id>
+      <header class="agent-head">
+        <div>
+          <h3 class="agent-name">—</h3>
+          <span class="muted voice"></span>
+        </div>
+        <span class="badge status" data-status="offline">offline</span>
+      </header>
+      <div class="meter"><div class="meter-fill"></div></div>
+      <div class="current-msg muted">—</div>
+      <details class="prompt-wrap">
+        <summary>system prompt</summary>
+        <textarea class="prompt-text" rows="6" placeholder="loading…"></textarea>
+        <div class="row">
+          <button class="ghost save-prompt">save &amp; push</button>
+          <span class="muted small save-status"></span>
+        </div>
+      </details>
+      <div class="row">
+        <button class="kick">kick</button>
+        <button class="kick-instructed ghost" title="kick with custom instructions">kick…</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/dashboard.js"></script>
+</body>
+</html>
