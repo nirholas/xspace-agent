@@ -262,3 +262,37 @@ grep ELEVENLABS /home/agent/ai-agents-x-space/.env
 curl -sf "https://api.elevenlabs.io/v1/voices" \
   -H "xi-api-key: YOUR_KEY" | python3 -c "import sys,json; print(len(json.load(sys.stdin)['voices']),'voices')"
 ```
+
+---
+
+## NEVER navigate Chrome tabs away from their assigned page
+
+**This is the most important operational rule.**
+
+| Chrome | Port | Should ALWAYS be on |
+|---|---|---|
+| Agent1 (Swarm) | 9222 | `http://localhost:3000/agent1` |
+| Agent2 (Swarm2) | 9224 | `http://localhost:3000/agent2` |
+| @swarminged | 9223 | X Space URL (once joined) |
+| @eplus / @trythreews | 9225 | X Space URL (once joined) |
+
+**Why**: X Space sessions are maintained per-tab. Navigating away drops the Space audio session. The mini-player appears briefly but navigating to a new Space URL re-triggers the join flow which may fail.
+
+**For agent pages**: Navigating away kills the WebRTC session. The agent disconnects from OpenAI Realtime and stops speaking.
+
+**What to do instead of navigating**:
+- To check state: use `curl http://localhost:3000/state`
+- To check tab URL: use `curl -sf http://127.0.0.1:9223/json`
+- To interact: use `pg.evaluate()` in puppeteer WITHOUT `pg.goto()`
+- To take a screenshot: `pg.screenshot()` without navigating
+
+**If a Chrome needs to join a new Space URL**:
+- Navigate there ONCE
+- Click "Start listening" 
+- Click "Request to speak"
+- Then NEVER navigate it again until the Space ends
+
+**If a Chrome was accidentally navigated away**:
+- Check if the mini-player is still active on x.com/home (check for Unmute/Mute/Leave buttons)
+- If mini-player gone: re-navigate to the Space URL and re-join
+- If Space ended: wait for new Space URL
