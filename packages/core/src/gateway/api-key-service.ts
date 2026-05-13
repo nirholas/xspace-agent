@@ -6,8 +6,11 @@
 // =============================================================================
 
 import { randomBytes, createHash } from 'crypto'
+import { eq, and } from 'drizzle-orm'
 import { ApiKeyRepository } from '../db/repositories/api-key'
 import { getJSON, setJSON, getRedis } from '../db/redis'
+import { getDatabase } from '../db/connection.js'
+import { apiKeys } from '../db/schema.js'
 import type { ApiKey } from '../db/repositories/api-key'
 import type { ApiKeyEnvironment, ApiScope, ParsedApiKey } from './types'
 
@@ -133,10 +136,6 @@ export class ApiKeyService {
     await this.invalidateCache(key.keyHash)
 
     // Update via direct DB (the repo doesn't have an update method, so we use the raw approach)
-    const { getDatabase } = await import('../db/connection.js')
-    const { apiKeys } = await import('../db/schema.js')
-    const { eq, and } = await import('drizzle-orm')
-
     const db = getDatabase()
     const [updated] = await db
       .update(apiKeys)
@@ -182,10 +181,6 @@ export class ApiKeyService {
 
     // Set old key to expire after grace period
     const previousKeyValidUntil = new Date(Date.now() + GRACE_PERIOD_MS)
-    const { getDatabase } = await import('../db/connection.js')
-    const { apiKeys } = await import('../db/schema.js')
-    const { eq } = await import('drizzle-orm')
-
     const db = getDatabase()
     await db
       .update(apiKeys)

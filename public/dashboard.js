@@ -510,450 +510,450 @@
   // ---------- socket handlers (registered when wireSocket runs) ----------
   function wireSocket(s) {
     const socket = s
-  socket.on("connect", () => {
-    els.connDot.classList.remove("offline"); els.connDot.classList.add("connected")
-    els.connLabel.textContent = "connected"
-  })
-  socket.on("disconnect", () => {
-    els.connDot.classList.remove("connected"); els.connDot.classList.add("offline")
-    els.connLabel.textContent = "disconnected"
-  })
-  socket.on("connect_error", (err) => {
-    const msg = (err && err.message) ? err.message : String(err)
-    els.connLabel.textContent = "error: " + msg
-    if (/unauthor/i.test(msg)) {
-      setKey(null)
-      showLogin("Socket rejected: " + msg)
-    }
-  })
-
-  // ---------- agent cards ----------
-  function renderAgents() {
-    const existing = new Map(
-      Array.from(els.agents.querySelectorAll(".agent-card"))
-        .map(el => [el.dataset.agentId, el])
-    )
-    const wantIds = Object.keys(state.agents).sort((a, b) => Number(a) - Number(b))
-
-    for (const id of wantIds) {
-      let card = existing.get(id)
-      if (!card) {
-        card = els.tpl.content.firstElementChild.cloneNode(true)
-        card.dataset.agentId = id
-        wireCard(card, Number(id))
-        els.agents.appendChild(card)
-      }
-      existing.delete(id)
-      updateCard(card, state.agents[id])
-    }
-    // remove agents no longer reported
-    for (const orphan of existing.values()) orphan.remove()
-    applyRoleUI()
-  }
-
-  function updateCard(card, agent) {
-    if (!agent) return
-    const id = String(agent.id)
-    card.querySelector(".agent-name").textContent = agent.name || `Agent ${id}`
-    const voice = state.voices[id] || state.voices[Number(id)]
-    card.querySelector(".voice").textContent = voice ? `voice: ${voice}` : ""
-    const badge = card.querySelector(".badge.status")
-    const status = agent.status || "offline"
-    badge.dataset.status = status
-    badge.textContent = status
-    badge.title = agent.lastReconnectAt
-      ? "last reconnect: " + fmtTime(agent.lastReconnectAt)
-      : ""
-    // Show/hide retry button based on deadlocked status
-    const retryBtn = card.querySelector(".retry-deadlock")
-    if (retryBtn) retryBtn.hidden = status !== "deadlocked"
-    const promptEl = card.querySelector(".prompt-text")
-    if (document.activeElement !== promptEl) {
-      const next = state.prompts[id] ?? state.prompts[Number(id)] ?? ""
-      if (promptEl.value !== next) promptEl.value = next
-    }
-    populatePicker(card, Number(id))
-  }
-
-  function populatePicker(card, agentId) {
-    const picker = card.querySelector(".personality-picker")
-    if (!picker) return
-    const current = state.personalitiesActive[agentId] ?? state.personalitiesActive[String(agentId)]
-    picker.innerHTML = ""
-    // Placeholder when no personalities loaded yet
-    if (!Object.keys(state.personalities).length) {
-      const opt = document.createElement("option")
-      opt.value = ""; opt.textContent = "no personalities loaded"
-      picker.appendChild(opt)
-      return
-    }
-    for (const [name, p] of Object.entries(state.personalities)) {
-      const opt = document.createElement("option")
-      opt.value = name
-      opt.textContent = p.displayName || name
-      if (name === current) opt.selected = true
-      picker.appendChild(opt)
-    }
-    // Reflect override state on the badge
-    const badge = card.querySelector(".override-badge")
-    if (badge) badge.hidden = !state.personalitiesOverride[agentId]
-  }
-
-  function wireCard(card, agentId) {
-    card.querySelector(".kick").addEventListener("click", () => {
-      socket.emit("kickRequest", { agentId })
+    socket.on("connect", () => {
+      els.connDot.classList.remove("offline"); els.connDot.classList.add("connected")
+      els.connLabel.textContent = "connected"
     })
-    card.querySelector(".retry-deadlock").addEventListener("click", () => {
-      socket.emit("kickConnect", { agentId })
+    socket.on("disconnect", () => {
+      els.connDot.classList.remove("connected"); els.connDot.classList.add("offline")
+      els.connLabel.textContent = "disconnected"
+    })
+    socket.on("connect_error", (err) => {
+      const msg = (err && err.message) ? err.message : String(err)
+      els.connLabel.textContent = "error: " + msg
+      if (/unauthor/i.test(msg)) {
+        setKey(null)
+        showLogin("Socket rejected: " + msg)
+      }
+    })
+
+    // ---------- agent cards ----------
+    function renderAgents() {
+      const existing = new Map(
+        Array.from(els.agents.querySelectorAll(".agent-card"))
+          .map(el => [el.dataset.agentId, el])
+      )
+      const wantIds = Object.keys(state.agents).sort((a, b) => Number(a) - Number(b))
+
+      for (const id of wantIds) {
+        let card = existing.get(id)
+        if (!card) {
+          card = els.tpl.content.firstElementChild.cloneNode(true)
+          card.dataset.agentId = id
+          wireCard(card, Number(id))
+          els.agents.appendChild(card)
+        }
+        existing.delete(id)
+        updateCard(card, state.agents[id])
+      }
+      // remove agents no longer reported
+      for (const orphan of existing.values()) orphan.remove()
+      applyRoleUI()
+    }
+
+    function updateCard(card, agent) {
+      if (!agent) return
+      const id = String(agent.id)
+      card.querySelector(".agent-name").textContent = agent.name || `Agent ${id}`
+      const voice = state.voices[id] || state.voices[Number(id)]
+      card.querySelector(".voice").textContent = voice ? `voice: ${voice}` : ""
+      const badge = card.querySelector(".badge.status")
+      const status = agent.status || "offline"
+      badge.dataset.status = status
+      badge.textContent = status
+      badge.title = agent.lastReconnectAt
+        ? "last reconnect: " + fmtTime(agent.lastReconnectAt)
+        : ""
+      // Show/hide retry button based on deadlocked status
       const retryBtn = card.querySelector(".retry-deadlock")
-      if (retryBtn) retryBtn.hidden = true
-    })
-    card.querySelector(".kick-instructed").addEventListener("click", () => {
-      const instructions = window.prompt("Kick with custom instructions (sent as response.create)?", "")
-      if (instructions == null) return
-      socket.emit("kickRequest", { agentId, instructions: instructions.trim() || null })
-    })
-    card.querySelector(".save-prompt").addEventListener("click", () => {
-      const instructions = card.querySelector(".prompt-text").value
-      socket.emit("promptUpdate", { agentId, instructions })
-      state.personalitiesOverride[agentId] = true
-      const overrideBadge = card.querySelector(".override-badge")
-      if (overrideBadge) overrideBadge.hidden = false
-      const statusEl = card.querySelector(".save-status")
-      statusEl.textContent = "pushed @ " + fmtTime()
-      setTimeout(() => { statusEl.textContent = "" }, 4000)
-    })
-    card.querySelector(".save-as-btn").addEventListener("click", async () => {
-      const instructions = card.querySelector(".prompt-text").value.trim()
-      if (!instructions) return
-      const rawName = window.prompt("Name for this personality (lowercase, hyphens ok):", "")
-      if (!rawName) return
-      const name = rawName.toLowerCase().replace(/[^a-z0-9_-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/, "")
-      if (!name) { alert("Invalid name"); return }
-      const displayName = window.prompt("Display name:", rawName) || rawName
-      try {
-        const r = await authedFetch("/personalities", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, displayName, prompt: instructions })
-        })
-        const data = await r.json()
-        if (!r.ok) { alert("Error: " + (data.error || r.status)); return }
+      if (retryBtn) retryBtn.hidden = status !== "deadlocked"
+      const promptEl = card.querySelector(".prompt-text")
+      if (document.activeElement !== promptEl) {
+        const next = state.prompts[id] ?? state.prompts[Number(id)] ?? ""
+        if (promptEl.value !== next) promptEl.value = next
+      }
+      populatePicker(card, Number(id))
+    }
+
+    function populatePicker(card, agentId) {
+      const picker = card.querySelector(".personality-picker")
+      if (!picker) return
+      const current = state.personalitiesActive[agentId] ?? state.personalitiesActive[String(agentId)]
+      picker.innerHTML = ""
+      // Placeholder when no personalities loaded yet
+      if (!Object.keys(state.personalities).length) {
+        const opt = document.createElement("option")
+        opt.value = ""; opt.textContent = "no personalities loaded"
+        picker.appendChild(opt)
+        return
+      }
+      for (const [name, p] of Object.entries(state.personalities)) {
+        const opt = document.createElement("option")
+        opt.value = name
+        opt.textContent = p.displayName || name
+        if (name === current) opt.selected = true
+        picker.appendChild(opt)
+      }
+      // Reflect override state on the badge
+      const badge = card.querySelector(".override-badge")
+      if (badge) badge.hidden = !state.personalitiesOverride[agentId]
+    }
+
+    function wireCard(card, agentId) {
+      card.querySelector(".kick").addEventListener("click", () => {
+        socket.emit("kickRequest", { agentId })
+      })
+      card.querySelector(".retry-deadlock").addEventListener("click", () => {
+        socket.emit("kickConnect", { agentId })
+        const retryBtn = card.querySelector(".retry-deadlock")
+        if (retryBtn) retryBtn.hidden = true
+      })
+      card.querySelector(".kick-instructed").addEventListener("click", () => {
+        const instructions = window.prompt("Kick with custom instructions (sent as response.create)?", "")
+        if (instructions == null) return
+        socket.emit("kickRequest", { agentId, instructions: instructions.trim() || null })
+      })
+      card.querySelector(".save-prompt").addEventListener("click", () => {
+        const instructions = card.querySelector(".prompt-text").value
+        socket.emit("promptUpdate", { agentId, instructions })
+        state.personalitiesOverride[agentId] = true
+        const overrideBadge = card.querySelector(".override-badge")
+        if (overrideBadge) overrideBadge.hidden = false
         const statusEl = card.querySelector(".save-status")
-        statusEl.textContent = `saved as "${name}"  @ ` + fmtTime()
-        setTimeout(() => { statusEl.textContent = "" }, 5000)
-      } catch (err) {
-        alert("Error: " + err.message)
+        statusEl.textContent = "pushed @ " + fmtTime()
+        setTimeout(() => { statusEl.textContent = "" }, 4000)
+      })
+      card.querySelector(".save-as-btn").addEventListener("click", async () => {
+        const instructions = card.querySelector(".prompt-text").value.trim()
+        if (!instructions) return
+        const rawName = window.prompt("Name for this personality (lowercase, hyphens ok):", "")
+        if (!rawName) return
+        const name = rawName.toLowerCase().replace(/[^a-z0-9_-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/, "")
+        if (!name) { alert("Invalid name"); return }
+        const displayName = window.prompt("Display name:", rawName) || rawName
+        try {
+          const r = await authedFetch("/personalities", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, displayName, prompt: instructions })
+          })
+          const data = await r.json()
+          if (!r.ok) { alert("Error: " + (data.error || r.status)); return }
+          const statusEl = card.querySelector(".save-status")
+          statusEl.textContent = `saved as "${name}"  @ ` + fmtTime()
+          setTimeout(() => { statusEl.textContent = "" }, 5000)
+        } catch (err) {
+          alert("Error: " + err.message)
+        }
+      })
+      card.querySelector(".personality-picker").addEventListener("change", (e) => {
+        const name = e.target.value
+        if (!name) return
+        socket.emit("personalityActivate", { agentId, name })
+      })
+      card.querySelector(".listen-btn").addEventListener("click", () => {
+        if (listenState[agentId]) stopListen(agentId)
+        else startListen(agentId)
+      })
+      card.querySelector(".vol-slider").addEventListener("input", (e) => {
+        const vol = parseFloat(e.target.value)
+        sessionStorage.setItem("xspace.vol." + agentId, vol)
+        const st = listenState[agentId]
+        if (st && st.audioEl) st.audioEl.volume = vol
+      })
+      const savedVol = sessionStorage.getItem("xspace.vol." + agentId)
+      if (savedVol !== null) card.querySelector(".vol-slider").value = savedVol
+    }
+
+    function setCurrent(msg, card) {
+      const box = card.querySelector(".current-msg")
+      box.textContent = msg || "—"
+      box.classList.toggle("active", !!msg)
+    }
+
+    function findCard(agentId) {
+      return els.agents.querySelector(`.agent-card[data-agent-id="${agentId}"]`)
+    }
+
+    // ---------- audio levels ----------
+    socket.on("audioLevel", ({ agentId, level }) => {
+      const card = findCard(agentId)
+      if (!card) return
+      const pct = Math.max(0, Math.min(1, Number(level) || 0)) * 100
+      card.querySelector(".meter-fill").style.width = pct.toFixed(1) + "%"
+      // Clear silence alarm when audio recovers
+      if (Number(level) >= 0.02 && !els.silenceBar.hidden) {
+        const alarmFor = els.silenceText.dataset.agentId
+        if (alarmFor == null || String(agentId) === alarmFor) els.silenceBar.hidden = true
       }
     })
-    card.querySelector(".personality-picker").addEventListener("change", (e) => {
-      const name = e.target.value
-      if (!name) return
-      socket.emit("personalityActivate", { agentId, name })
+
+    // ---------- silence alarm ----------
+    socket.on("silenceAlarm", ({ agentId, agentName, durationMs }) => {
+      const name = agentName || state.agents[agentId]?.name || `Agent ${agentId}`
+      const secs = Math.round((durationMs || 0) / 1000)
+      els.silenceText.textContent = `🔇 ${name} — silent ${secs}s while speaking`
+      els.silenceText.dataset.agentId = String(agentId)
+      els.silenceBar.hidden = false
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("🔇 Silence Alarm", {
+          body: `${name} has been silent for ${secs}s while status is speaking`,
+          tag: `silence-${agentId}`,
+          renotify: true
+        })
+      }
     })
-    card.querySelector(".listen-btn").addEventListener("click", () => {
-      if (listenState[agentId]) stopListen(agentId)
-      else startListen(agentId)
-    })
-    card.querySelector(".vol-slider").addEventListener("input", (e) => {
-      const vol = parseFloat(e.target.value)
-      sessionStorage.setItem("xspace.vol." + agentId, vol)
+
+    // ---------- listen mode audio streaming ----------
+    socket.on("listenAudioInit", ({ agentId, mime, chunk }) => {
       const st = listenState[agentId]
-      if (st && st.audioEl) st.audioEl.volume = vol
+      if (!st || st.mode !== "webrtc") return
+      appendListenChunk(agentId, chunk)
     })
-    const savedVol = sessionStorage.getItem("xspace.vol." + agentId)
-    if (savedVol !== null) card.querySelector(".vol-slider").value = savedVol
-  }
 
-  function setCurrent(msg, card) {
-    const box = card.querySelector(".current-msg")
-    box.textContent = msg || "—"
-    box.classList.toggle("active", !!msg)
-  }
+    socket.on("listenAudio", ({ agentId, mime, chunk, t }) => {
+      const st = listenState[agentId]
+      if (!st || st.mode !== "webrtc") return
+      if (t) {
+        const lag = Math.max(0, Date.now() - t)
+        const card = findCard(agentId)
+        if (card) {
+          const latEl = card.querySelector(".listen-latency")
+          if (latEl) latEl.textContent = "~" + lag + "ms"
+        }
+      }
+      appendListenChunk(agentId, chunk)
+    })
 
-  function findCard(agentId) {
-    return els.agents.querySelector(`.agent-card[data-agent-id="${agentId}"]`)
-  }
-
-  // ---------- audio levels ----------
-  socket.on("audioLevel", ({ agentId, level }) => {
-    const card = findCard(agentId)
-    if (!card) return
-    const pct = Math.max(0, Math.min(1, Number(level) || 0)) * 100
-    card.querySelector(".meter-fill").style.width = pct.toFixed(1) + "%"
-    // Clear silence alarm when audio recovers
-    if (Number(level) >= 0.02 && !els.silenceBar.hidden) {
-      const alarmFor = els.silenceText.dataset.agentId
-      if (alarmFor == null || String(agentId) === alarmFor) els.silenceBar.hidden = true
+    // ---------- header / turn ----------
+    function renderTurnQueue() {
+      if (!els.turnQueue) return
+      const chips = []
+      if (state.currentTurn !== null && state.currentTurn !== undefined) {
+        const name = escapeText(state.agents[state.currentTurn]?.name || `Agent ${state.currentTurn}`)
+        chips.push(`<span class="q-chip active">${name} · speaking</span>`)
+      }
+      for (const id of (state.turnQueue || [])) {
+        const name = escapeText(state.agents[id]?.name || `Agent ${id}`)
+        chips.push(`<span class="q-arrow">→</span><span class="q-chip queued">${name} · queued</span>`)
+      }
+      els.turnQueue.innerHTML = chips.length ? chips.join("") : '<span class="q-idle">idle</span>'
     }
-  })
 
-  // ---------- silence alarm ----------
-  socket.on("silenceAlarm", ({ agentId, agentName, durationMs }) => {
-    const name = agentName || state.agents[agentId]?.name || `Agent ${agentId}`
-    const secs = Math.round((durationMs || 0) / 1000)
-    els.silenceText.textContent = `🔇 ${name} — silent ${secs}s while speaking`
-    els.silenceText.dataset.agentId = String(agentId)
-    els.silenceBar.hidden = false
-    if ("Notification" in window && Notification.permission === "granted") {
-      new Notification("🔇 Silence Alarm", {
-        body: `${name} has been silent for ${secs}s while status is speaking`,
-        tag: `silence-${agentId}`,
-        renotify: true
-      })
+    function latClass(ms, good, warn) {
+      if (ms == null) return ""
+      return ms <= good ? "lat-good" : ms <= warn ? "lat-warn" : "lat-bad"
     }
-  })
+    function fmtMs(ms) {
+      if (ms == null) return "—"
+      return ms < 1000 ? ms + "ms" : (ms / 1000).toFixed(1) + "s"
+    }
 
-  // ---------- listen mode audio streaming ----------
-  socket.on("listenAudioInit", ({ agentId, mime, chunk }) => {
-    const st = listenState[agentId]
-    if (!st || st.mode !== "webrtc") return
-    appendListenChunk(agentId, chunk)
-  })
+    function renderLatency(card, agentId) {
+      const m = state.turnMetrics[agentId] || state.turnMetrics[String(agentId)]
+      const row = card && card.querySelector(".latency-row")
+      if (!row) return
+      if (!m || !m.count) { row.hidden = true; return }
+      row.hidden = false
+      const last = m.recent && m.recent[m.recent.length - 1]
+      const lastMs = last ? last.durationMs : null
+      const ttftMs = last ? last.ttftMs : null
+      const p95Ms  = m.p95DurMs
+      const setSpan = (sel, ms, good, warn) => {
+        const el = row.querySelector(sel)
+        if (el) { el.className = sel.slice(1) + " " + latClass(ms, good, warn); el.textContent = fmtMs(ms) }
+      }
+      setSpan(".lat-last", lastMs, 3000, 6000)
+      setSpan(".lat-ttft", ttftMs, 500, 1500)
+      setSpan(".lat-p95", p95Ms, 3000, 6000)
+    }
 
-  socket.on("listenAudio", ({ agentId, mime, chunk, t }) => {
-    const st = listenState[agentId]
-    if (!st || st.mode !== "webrtc") return
-    if (t) {
-      const lag = Math.max(0, Date.now() - t)
+    function renderSparkline(card, agentId) {
+      const m = state.turnMetrics[agentId] || state.turnMetrics[String(agentId)]
+      const el = card && card.querySelector(".sparkline")
+      if (!el) return
+      const recent = (m && m.recent ? m.recent : []).slice(-8)
+      if (!recent.length) { el.innerHTML = ""; return }
+      const maxMs = Math.max(...recent.map(r => r.durationMs || 0), 1)
+      el.innerHTML = recent.map(r => {
+        const pct = Math.max(4, Math.round(((r.durationMs || 0) / maxMs) * 100))
+        const cls = (r.durationMs || 0) > 6000 ? " bad" : (r.durationMs || 0) > 3000 ? " warn" : ""
+        return `<div class="spark-bar${cls}" style="height:${pct}%" title="${fmtMs(r.durationMs)}"></div>`
+      }).join("")
+    }
+
+    socket.on("stateUpdate", ({ agents, currentTurn, turnQueue }) => {
+      if (agents) state.agents = agents
+      if (currentTurn !== undefined) state.currentTurn = currentTurn ?? null
+      if (Array.isArray(turnQueue)) state.turnQueue = turnQueue
+      renderAgents()
+      renderTurnQueue()
+    })
+
+    socket.on("agentStatus", ({ agentId, status, name }) => {
+      if (!state.agents[agentId]) state.agents[agentId] = { id: agentId, name, status }
+      else { state.agents[agentId].status = status; if (name) state.agents[agentId].name = name }
+      const card = findCard(agentId)
+      if (card) updateCard(card, state.agents[agentId])
+    })
+
+    socket.on("agentDeadlock", ({ agentId }) => {
+      if (state.agents[agentId]) state.agents[agentId].status = "deadlocked"
+      const card = findCard(agentId)
+      if (card) updateCard(card, state.agents[agentId] || { id: agentId, status: "deadlocked" })
+    })
+
+    socket.on("turnGranted", ({ agentId }) => {
+      state.currentTurn = agentId
+      renderTurnQueue()
+    })
+
+    socket.on("turnComplete", ({ agentId, durationMs, ttftMs, chars }) => {
+      const m = state.turnMetrics[agentId] || (state.turnMetrics[agentId] = { count: 0, p50DurMs: null, p95DurMs: null, p50TtftMs: null, p95TtftMs: null, recent: [] })
+      m.recent.push({ durationMs, ttftMs, chars })
+      if (m.recent.length > 8) m.recent.shift()
+      m.count = (m.count || 0) + 1
+      const card = findCard(agentId)
+      if (card) { renderLatency(card, agentId); renderSparkline(card, agentId) }
+    })
+
+    // ---------- transcript ----------
+    socket.on("messageHistory", (history) => {
+      if (!Array.isArray(history)) return
+      els.transcript.innerHTML = ""
+      state.seenMessageIds.clear()
+      for (const m of history) {
+        if (!m || !m.id) continue
+        state.seenMessageIds.add(String(m.id))
+        const klass = m.isUser ? "human" : `agent-${m.agentId}`
+        const kind  = m.isUser ? "human" : "agent"
+        addEntry({ id: m.id, classes: klass, kind, name: m.name || (m.isUser ? "User" : `Agent ${m.agentId}`), text: m.text })
+      }
+    })
+
+    socket.on("textDelta", ({ agentId, delta, messageId, name }) => {
+      if (!messageId) return
+      let s = state.streaming[messageId]
+      if (!s) {
+        const entry = addEntry({
+          id: messageId,
+          classes: `agent-${agentId}`,
+          kind: "agent",
+          name: name || state.agents[agentId]?.name || `Agent ${agentId}`,
+          text: "",
+          streaming: true
+        })
+        s = state.streaming[messageId] = { agentId, text: "", el: entry }
+      }
+      s.text += delta || ""
+      appendTo(s.el, delta || "")
+      const card = findCard(agentId)
+      if (card) setCurrent(s.text, card)
+    })
+
+    socket.on("textComplete", (msg) => {
+      if (!msg) return
+      const key = String(msg.id)
+      const s = state.streaming[key]
+      if (s) {
+        finalize(s.el, msg.text || s.text)
+        delete state.streaming[key]
+      } else if (!state.seenMessageIds.has(key)) {
+        const klass = msg.isUser ? "human" : `agent-${msg.agentId}`
+        const kind  = msg.isUser ? "human" : "agent"
+        addEntry({
+          id: msg.id, classes: klass, kind,
+          name: msg.name || (msg.isUser ? "User" : `Agent ${msg.agentId}`),
+          text: msg.text
+        })
+      }
+      state.seenMessageIds.add(key)
+      if (!msg.isUser) {
+        const card = findCard(msg.agentId)
+        if (card) setCurrent(msg.text, card)
+      }
+    })
+
+    socket.on("userMessage", (msg) => {
+      if (!msg || !msg.id || state.seenMessageIds.has(String(msg.id))) return
+      state.seenMessageIds.add(String(msg.id))
+      const isInjected = pendingInjectTexts.has(msg.text)
+      if (isInjected) pendingInjectTexts.delete(msg.text)
+      const kind    = isInjected ? "injected" : "human"
+      const classes = isInjected ? "human injected" : "human"
+      addEntry({ id: msg.id, classes, kind, name: msg.name || "User", text: msg.text })
+    })
+
+    socket.on("humanTranscript", ({ agentId, name, text }) => {
+      addEntry({ classes: "human", kind: "human", name: name || "Human (Space)", text })
+    })
+
+    socket.on("pumpfunMessage", (msg) => {
+      if (!msg) return
+      addEntry({ classes: "human", kind: "human", name: msg.name || "external", text: msg.text })
+    })
+
+    socket.on("promptUpdated", ({ agentId, instructions }) => {
+      state.prompts[agentId] = instructions
       const card = findCard(agentId)
       if (card) {
-        const latEl = card.querySelector(".listen-latency")
-        if (latEl) latEl.textContent = "~" + lag + "ms"
+        const el = card.querySelector(".prompt-text")
+        if (document.activeElement !== el) el.value = instructions
       }
-    }
-    appendListenChunk(agentId, chunk)
-  })
-
-  // ---------- header / turn ----------
-  function renderTurnQueue() {
-    if (!els.turnQueue) return
-    const chips = []
-    if (state.currentTurn !== null && state.currentTurn !== undefined) {
-      const name = escapeText(state.agents[state.currentTurn]?.name || `Agent ${state.currentTurn}`)
-      chips.push(`<span class="q-chip active">${name} · speaking</span>`)
-    }
-    for (const id of (state.turnQueue || [])) {
-      const name = escapeText(state.agents[id]?.name || `Agent ${id}`)
-      chips.push(`<span class="q-arrow">→</span><span class="q-chip queued">${name} · queued</span>`)
-    }
-    els.turnQueue.innerHTML = chips.length ? chips.join("") : '<span class="q-idle">idle</span>'
-  }
-
-  function latClass(ms, good, warn) {
-    if (ms == null) return ""
-    return ms <= good ? "lat-good" : ms <= warn ? "lat-warn" : "lat-bad"
-  }
-  function fmtMs(ms) {
-    if (ms == null) return "—"
-    return ms < 1000 ? ms + "ms" : (ms / 1000).toFixed(1) + "s"
-  }
-
-  function renderLatency(card, agentId) {
-    const m = state.turnMetrics[agentId] || state.turnMetrics[String(agentId)]
-    const row = card && card.querySelector(".latency-row")
-    if (!row) return
-    if (!m || !m.count) { row.hidden = true; return }
-    row.hidden = false
-    const last = m.recent && m.recent[m.recent.length - 1]
-    const lastMs = last ? last.durationMs : null
-    const ttftMs = last ? last.ttftMs : null
-    const p95Ms  = m.p95DurMs
-    const setSpan = (sel, ms, good, warn) => {
-      const el = row.querySelector(sel)
-      if (el) { el.className = sel.slice(1) + " " + latClass(ms, good, warn); el.textContent = fmtMs(ms) }
-    }
-    setSpan(".lat-last", lastMs, 3000, 6000)
-    setSpan(".lat-ttft", ttftMs, 500, 1500)
-    setSpan(".lat-p95", p95Ms, 3000, 6000)
-  }
-
-  function renderSparkline(card, agentId) {
-    const m = state.turnMetrics[agentId] || state.turnMetrics[String(agentId)]
-    const el = card && card.querySelector(".sparkline")
-    if (!el) return
-    const recent = (m && m.recent ? m.recent : []).slice(-8)
-    if (!recent.length) { el.innerHTML = ""; return }
-    const maxMs = Math.max(...recent.map(r => r.durationMs || 0), 1)
-    el.innerHTML = recent.map(r => {
-      const pct = Math.max(4, Math.round(((r.durationMs || 0) / maxMs) * 100))
-      const cls = (r.durationMs || 0) > 6000 ? " bad" : (r.durationMs || 0) > 3000 ? " warn" : ""
-      return `<div class="spark-bar${cls}" style="height:${pct}%" title="${fmtMs(r.durationMs)}"></div>`
-    }).join("")
-  }
-
-  socket.on("stateUpdate", ({ agents, currentTurn, turnQueue }) => {
-    if (agents) state.agents = agents
-    if (currentTurn !== undefined) state.currentTurn = currentTurn ?? null
-    if (Array.isArray(turnQueue)) state.turnQueue = turnQueue
-    renderAgents()
-    renderTurnQueue()
-  })
-
-  socket.on("agentStatus", ({ agentId, status, name }) => {
-    if (!state.agents[agentId]) state.agents[agentId] = { id: agentId, name, status }
-    else { state.agents[agentId].status = status; if (name) state.agents[agentId].name = name }
-    const card = findCard(agentId)
-    if (card) updateCard(card, state.agents[agentId])
-  })
-
-  socket.on("agentDeadlock", ({ agentId }) => {
-    if (state.agents[agentId]) state.agents[agentId].status = "deadlocked"
-    const card = findCard(agentId)
-    if (card) updateCard(card, state.agents[agentId] || { id: agentId, status: "deadlocked" })
-  })
-
-  socket.on("turnGranted", ({ agentId }) => {
-    state.currentTurn = agentId
-    renderTurnQueue()
-  })
-
-  socket.on("turnComplete", ({ agentId, durationMs, ttftMs, chars }) => {
-    const m = state.turnMetrics[agentId] || (state.turnMetrics[agentId] = { count: 0, p50DurMs: null, p95DurMs: null, p50TtftMs: null, p95TtftMs: null, recent: [] })
-    m.recent.push({ durationMs, ttftMs, chars })
-    if (m.recent.length > 8) m.recent.shift()
-    m.count = (m.count || 0) + 1
-    const card = findCard(agentId)
-    if (card) { renderLatency(card, agentId); renderSparkline(card, agentId) }
-  })
-
-  // ---------- transcript ----------
-  socket.on("messageHistory", (history) => {
-    if (!Array.isArray(history)) return
-    els.transcript.innerHTML = ""
-    state.seenMessageIds.clear()
-    for (const m of history) {
-      if (!m || !m.id) continue
-      state.seenMessageIds.add(String(m.id))
-      const klass = m.isUser ? "human" : `agent-${m.agentId}`
-      const kind  = m.isUser ? "human" : "agent"
-      addEntry({ id: m.id, classes: klass, kind, name: m.name || (m.isUser ? "User" : `Agent ${m.agentId}`), text: m.text })
-    }
-  })
-
-  socket.on("textDelta", ({ agentId, delta, messageId, name }) => {
-    if (!messageId) return
-    let s = state.streaming[messageId]
-    if (!s) {
-      const entry = addEntry({
-        id: messageId,
-        classes: `agent-${agentId}`,
-        kind: "agent",
-        name: name || state.agents[agentId]?.name || `Agent ${agentId}`,
-        text: "",
-        streaming: true
-      })
-      s = state.streaming[messageId] = { agentId, text: "", el: entry }
-    }
-    s.text += delta || ""
-    appendTo(s.el, delta || "")
-    const card = findCard(agentId)
-    if (card) setCurrent(s.text, card)
-  })
-
-  socket.on("textComplete", (msg) => {
-    if (!msg) return
-    const key = String(msg.id)
-    const s = state.streaming[key]
-    if (s) {
-      finalize(s.el, msg.text || s.text)
-      delete state.streaming[key]
-    } else if (!state.seenMessageIds.has(key)) {
-      const klass = msg.isUser ? "human" : `agent-${msg.agentId}`
-      const kind  = msg.isUser ? "human" : "agent"
-      addEntry({
-        id: msg.id, classes: klass, kind,
-        name: msg.name || (msg.isUser ? "User" : `Agent ${msg.agentId}`),
-        text: msg.text
-      })
-    }
-    state.seenMessageIds.add(key)
-    if (!msg.isUser) {
-      const card = findCard(msg.agentId)
-      if (card) setCurrent(msg.text, card)
-    }
-  })
-
-  socket.on("userMessage", (msg) => {
-    if (!msg || !msg.id || state.seenMessageIds.has(String(msg.id))) return
-    state.seenMessageIds.add(String(msg.id))
-    const isInjected = pendingInjectTexts.has(msg.text)
-    if (isInjected) pendingInjectTexts.delete(msg.text)
-    const kind    = isInjected ? "injected" : "human"
-    const classes = isInjected ? "human injected" : "human"
-    addEntry({ id: msg.id, classes, kind, name: msg.name || "User", text: msg.text })
-  })
-
-  socket.on("humanTranscript", ({ agentId, name, text }) => {
-    addEntry({ classes: "human", kind: "human", name: name || "Human (Space)", text })
-  })
-
-  socket.on("pumpfunMessage", (msg) => {
-    if (!msg) return
-    addEntry({ classes: "human", kind: "human", name: msg.name || "external", text: msg.text })
-  })
-
-  socket.on("promptUpdated", ({ agentId, instructions }) => {
-    state.prompts[agentId] = instructions
-    const card = findCard(agentId)
-    if (card) {
-      const el = card.querySelector(".prompt-text")
-      if (document.activeElement !== el) el.value = instructions
-    }
-  })
-
-  socket.on("auditLog", (msg) => {
-    if (!msg || !msg.id || state.seenMessageIds.has(String(msg.id))) return
-    state.seenMessageIds.add(String(msg.id))
-    addEntry({ id: msg.id, classes: "audit", kind: "audit", name: msg.name || "audit", text: msg.text })
-  })
-
-  socket.on("personalitiesUpdated", (data) => {
-    if (data && data.personalities) state.personalities = data.personalities
-    if (data && data.active) state.personalitiesActive = data.active
-    if (data && data.overrides) state.personalitiesOverride = data.overrides
-    els.agents.querySelectorAll(".agent-card").forEach(card => {
-      const id = Number(card.dataset.agentId)
-      populatePicker(card, id)
     })
-  })
 
-  socket.on("personalityActivated", ({ agentId, name }) => {
-    state.personalitiesActive[agentId] = name
-    delete state.personalitiesOverride[agentId]
-    const card = findCard(agentId)
-    if (!card) return
-    const picker = card.querySelector(".personality-picker")
-    if (picker) picker.value = name
-    const badge = card.querySelector(".override-badge")
-    if (badge) badge.hidden = true
-  })
+    socket.on("auditLog", (msg) => {
+      if (!msg || !msg.id || state.seenMessageIds.has(String(msg.id))) return
+      state.seenMessageIds.add(String(msg.id))
+      addEntry({ id: msg.id, classes: "audit", kind: "audit", name: msg.name || "audit", text: msg.text })
+    })
 
-  socket.on("promptOverrideActive", ({ agentId }) => {
-    state.personalitiesOverride[agentId] = true
-    const card = findCard(agentId)
-    if (!card) return
-    const badge = card.querySelector(".override-badge")
-    if (badge) badge.hidden = false
-  })
-
-  socket.on("rateLimited", ({ event, retryAfterMs }) => {
-    const retry = Math.ceil((retryAfterMs || 1000) / 1000)
-    showToast(`Rate-limited: ${event} — retry in ${retry}s`)
-    // Briefly disable the relevant action buttons so operators notice the limit.
-    const selectors = []
-    if (event === "kickRequest")   selectors.push(".kick", ".kick-instructed")
-    if (event === "promptUpdate")  selectors.push(".save-prompt")
-    if (event === "userMessage")   selectors.push("#inject-send")
-    if (event.startsWith("xspace")) selectors.push("[data-xspace-btn]")
-    const ms = retryAfterMs || 1000
-    selectors.forEach(sel => {
-      document.querySelectorAll(sel).forEach(btn => {
-        btn.disabled = true
-        setTimeout(() => { btn.disabled = false }, ms)
+    socket.on("personalitiesUpdated", (data) => {
+      if (data && data.personalities) state.personalities = data.personalities
+      if (data && data.active) state.personalitiesActive = data.active
+      if (data && data.overrides) state.personalitiesOverride = data.overrides
+      els.agents.querySelectorAll(".agent-card").forEach(card => {
+        const id = Number(card.dataset.agentId)
+        populatePicker(card, id)
       })
     })
-  })
+
+    socket.on("personalityActivated", ({ agentId, name }) => {
+      state.personalitiesActive[agentId] = name
+      delete state.personalitiesOverride[agentId]
+      const card = findCard(agentId)
+      if (!card) return
+      const picker = card.querySelector(".personality-picker")
+      if (picker) picker.value = name
+      const badge = card.querySelector(".override-badge")
+      if (badge) badge.hidden = true
+    })
+
+    socket.on("promptOverrideActive", ({ agentId }) => {
+      state.personalitiesOverride[agentId] = true
+      const card = findCard(agentId)
+      if (!card) return
+      const badge = card.querySelector(".override-badge")
+      if (badge) badge.hidden = false
+    })
+
+    socket.on("rateLimited", ({ event, retryAfterMs }) => {
+      const retry = Math.ceil((retryAfterMs || 1000) / 1000)
+      showToast(`Rate-limited: ${event} — retry in ${retry}s`)
+      // Briefly disable the relevant action buttons so operators notice the limit.
+      const selectors = []
+      if (event === "kickRequest")   selectors.push(".kick", ".kick-instructed")
+      if (event === "promptUpdate")  selectors.push(".save-prompt")
+      if (event === "userMessage")   selectors.push("#inject-send")
+      if (event.startsWith("xspace")) selectors.push("[data-xspace-btn]")
+      const ms = retryAfterMs || 1000
+      selectors.forEach(sel => {
+        document.querySelectorAll(sel).forEach(btn => {
+          btn.disabled = true
+          setTimeout(() => { btn.disabled = false }, ms)
+        })
+      })
+    })
   } // end wireSocket
 
   // ---------- inject ----------

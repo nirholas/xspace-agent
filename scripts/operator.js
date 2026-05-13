@@ -2,13 +2,13 @@
 // Operator registry CLI
 // Usage: pnpm operator <add|remove|list|rotate> [name] [--role admin|viewer]
 
-"use strict"
+import fs from "fs"
+import crypto from "crypto"
+import path from "path"
+import readline from "readline"
+import { fileURLToPath } from "url"
 
-const fs = require("fs")
-const crypto = require("crypto")
-const path = require("path")
-const readline = require("readline")
-
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const REGISTRY_PATH = path.join(__dirname, "..", "operators.json")
 
 function readRegistry() {
@@ -51,7 +51,7 @@ function prompt(question, { silent } = {}) {
           rl.close()
           process.stdout.write("\n")
           resolve(buf)
-        } else if (ch === "") {
+        } else if (ch === "") {
           process.exit()
         } else {
           buf += ch
