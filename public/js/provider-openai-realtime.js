@@ -298,6 +298,7 @@ function initOpenAIRealtime(agent) {
     let blobUrl = null
     try {
       agent.setStatus("speaking")
+      const httpReqStart = Date.now()
       const res = await fetch(`/tts/${agent.AGENT_ID}/stream`, {
         method: "POST",
         headers: authHeaders({ "Content-Type": "application/json" }),
@@ -312,6 +313,7 @@ function initOpenAIRealtime(agent) {
         return
       }
       const blob = await res.blob()
+      agent.log(`[EL-HTTP] first byte: ${Date.now() - httpReqStart} ms`)
       blobUrl = URL.createObjectURL(blob)
       const audio = new Audio(blobUrl)
       currentAudioEl = audio
@@ -556,26 +558,47 @@ function initOpenAIRealtime(agent) {
     startConnection(false)
   })
 
-  // Handle text-to-agent for Agent 0 (receives chat via data channel)
+  // Both agents respond to textToAgent (banter forwarding from server)
   agent.socket.on("textToAgent", ({ text, from }) => {
     if (!dc || dc.readyState !== "open") return
-    if (agent.AGENT_ID !== 0) return
 
-    agent.log("Received text from " + from + ": " + text)
+    agent.log("Received from " + from + ": " + text)
 
-    const event = {
+    dc.send(JSON.stringify({
       type: "conversation.item.create",
       item: {
         type: "message",
         role: "user",
-        content: [{ type: "input_text", text: `[CHAT - ${from}]: ${text}` }]
+        content: [{ type: "input_text", text: `[${from}]: ${text}` }]
+      }
+    }))
+
+    setTimeout(() => dc.send(JSON.stringify({ type: "response.create" })), 100)
+  })
+
+  // Claim-token: server tells this agent another agent took the floor — cancel now
+  agent.socket.on("cancelResponse", ({ reason }) => {
+    agent.log("Cancelled: " + (reason || "floor taken"))
+    if (dc && dc.readyState === "open") {
+      try { dc.send(JSON.stringify({ type: "response.cancel" })) } catch (_) {}
+    }
+    // Reset EL state if mid-utterance
+    if (USE_ELEVEN) {
+      elGen++
+      elBuffer = ""
+      elDone = false
+      pendingUtterances = 0
+      speakChainAbort.abort()
+      speakChainAbort = new AbortController()
+      speakChain = Promise.resolve()
+      if (currentAudioEl) {
+        try { currentAudioEl.pause() } catch (_) {}
+        currentAudioEl.src = ""
+        currentAudioEl = null
       }
     }
-    dc.send(JSON.stringify(event))
-
-    setTimeout(() => {
-      dc.send(JSON.stringify({ type: "response.create" }))
-    }, 100)
+    agent.setStatus("idle")
+    agent.socket.emit("releaseTurn", { agentId: agent.AGENT_ID })
   })
 
   // ------------------------------------------------------------------ connect
@@ -709,6 +732,18 @@ function initOpenAIRealtime(agent) {
           agent.log("Requested text-only output for ElevenLabs path")
         }
         startHealthPing()
+
+        // Agent 0 kicks off the greeting; if 0 isn't connected, agent 1 can too
+        if (agent.AGENT_ID === 0) {
+          setTimeout(() => {
+            if (dc && dc.readyState === "open") {
+              dc.send(JSON.stringify({
+                type: "response.create",
+                response: { instructions: "Greet the Space in 1-2 natural sentences. Mention three.ws. Be human and warm." }
+              }))
+            }
+          }, 1500)
+        }
       }
 
       dc.onclose = () => {
@@ -804,6 +839,15 @@ function initOpenAIRealtime(agent) {
           agent.socket.emit("releaseTurn", { agentId: agent.AGENT_ID })
           agent.log("Barge-in: cancelled current response")
         }
+        if (USE_ELEVEN_WS) {
+          bargedIn = true
+          bargeInElWs()
+          if (dc && dc.readyState === "open") {
+            try { dc.send(JSON.stringify({ type: "response.cancel" })) } catch (_) {}
+          }
+          agent.socket.emit("releaseTurn", { agentId: agent.AGENT_ID })
+          agent.log("Barge-in (WS): cancelled current response")
+        }
       }
       else if (msg.type === "input_audio_buffer.speech_stopped") {
         bargedIn = false
@@ -835,7 +879,8 @@ function initOpenAIRealtime(agent) {
           })
           agent.addChat(agent.AGENT_NAME, finalText, "self")
           agent.log("Response complete")
-          if (USE_ELEVEN) speakViaElevenLabs(finalText)
+          if (USE_ELEVEN_WS) speakViaElevenLabsWs(finalText)
+          else if (USE_ELEVEN) speakViaElevenLabs(finalText)
         }
       }
       else if (msg.type === "response.done") {

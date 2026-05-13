@@ -1,0 +1,17 @@
+[Unit]
+Description=Swarm X-Space Agent Server
+After=network.target
+
+[Service]
+Type=simple
+User=agent
+WorkingDirectory=/home/agent/x-spaces-v2
+EnvironmentFile=/home/agent/x-spaces-v2/.env
+ExecStart=/usr/bin/node /home/agent/x-spaces-v2/server.js
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/home/agent/x-spaces-v2/server.log
+StandardError=append:/home/agent/x-spaces-v2/server.log
+
+[Install]
+WantedBy=multi-user.target

@@ -69,33 +69,127 @@ const io = new Server(server, {
 
 app.use(express.json())
 
+// ── SECURITY: gate operator HTML via path before express.static can serve them ──
+// Operator HTML files must never be served raw — they would reach the browser
+// without window.AGENT_AUTH_KEY injected. All routes below use sendWithAuthInjection
+// which is hoisted (function declaration) so forward-reference is safe.
+const GATED_HTML = new Set([
+  "bob.html", "alice.html", "admin.html", "builder.html",
+  "server-agent1.html", "server-agent2.html",
+  "server-admin.html", "server-builder.html", "server-dashboard.html"
+])
+app.use((req, res, next) => {
+  if (req.method !== "GET" && req.method !== "HEAD") return next()
+  const m = req.path.match(/\/([^/]+\.html)$/i)
+  if (m && GATED_HTML.has(m[1].toLowerCase())) {
+    // eslint-disable-next-line no-use-before-define
+    return requireAuth(req, res, () => sendWithAuthInjection(res, m[1], req.rawKey))
+  }
+  next()
+})
+
 // ============================================================
-// AUTH — gate operator surfaces behind ADMIN_API_KEY
+// AUTH — operator registry (operators.json) with ADMIN_API_KEY fallback
 // ============================================================
 const ADMIN_API_KEY = (process.env.ADMIN_API_KEY || "").trim()
-const AUTH_REQUIRED = ADMIN_API_KEY.length > 0
-// When auth is OFF, default to 127.0.0.1 so an unprotected server is never
-// reachable from the network by accident. When auth is ON, default to 0.0.0.0.
-const HOST = process.env.HOST || (AUTH_REQUIRED ? "0.0.0.0" : "127.0.0.1")
+const REGISTRY_PATH = path.join(__dirname, "operators.json")
 
-if (!AUTH_REQUIRED) {
-  console.warn("\x1b[33m⚠  ADMIN_API_KEY is not set — server is running in OPEN dev mode.\x1b[0m")
-  console.warn("\x1b[33m   Bound to 127.0.0.1 only. Set ADMIN_API_KEY in .env before exposing.\x1b[0m")
-} else {
-  console.log(`\x1b[32m✓ ADMIN_API_KEY set (${ADMIN_API_KEY.length} chars) — privileged endpoints gated.\x1b[0m`)
-  if (HOST === "0.0.0.0") {
-    console.warn("\x1b[33m⚠  HOST=0.0.0.0 — server is reachable on all network interfaces.\x1b[0m")
-    console.warn("\x1b[33m   Behind a Cloudflare Tunnel, set HOST=127.0.0.1 instead — cloudflared connects from localhost.\x1b[0m")
-    console.warn("\x1b[33m   See docs/deploy-cloudflare-tunnel.md\x1b[0m")
+// In-memory operator registry. null = file absent, use ADMIN_API_KEY fallback.
+let _registry = null
+
+function _loadRegistry() {
+  let retries = 3
+  while (retries > 0) {
+    try {
+      const raw = fs.readFileSync(REGISTRY_PATH, "utf8")
+      _registry = JSON.parse(raw)
+      console.log(`\x1b[32m✓ operators.json: ${(_registry.operators || []).length} operator(s) loaded.\x1b[0m`)
+      return
+    } catch (e) {
+      if (e.code === "ENOENT") { _registry = null; return }
+      retries--
+      const deadline = Date.now() + 50; while (Date.now() < deadline) {}
+      if (retries === 0) console.error("[Auth] Failed to parse operators.json:", e.message)
+    }
   }
 }
 
-function timingSafeEqual(a, b) {
-  if (typeof a !== "string" || typeof b !== "string") return false
-  const ab = Buffer.from(a)
-  const bb = Buffer.from(b)
-  if (ab.length !== bb.length) return false
-  try { return crypto.timingSafeEqual(ab, bb) } catch (_) { return false }
+_loadRegistry()
+
+let _reloadDebounce = null
+function _scheduleReload() {
+  clearTimeout(_reloadDebounce)
+  _reloadDebounce = setTimeout(_loadRegistry, 150)
+}
+
+;(function _startWatcher() {
+  try { fs.watch(REGISTRY_PATH, _scheduleReload).on("error", () => {}) } catch (_) {}
+  try {
+    fs.watch(__dirname, (ev, fn) => {
+      if (fn === "operators.json") { _scheduleReload(); _startWatcher() }
+    }).on("error", () => {})
+  } catch (_) {}
+})()
+
+process.on("SIGHUP", () => {
+  console.log("[Auth] SIGHUP — reloading operators.json")
+  _loadRegistry()
+})
+
+function _verifyKeyHash(key, keyHash) {
+  const sep = (keyHash || "").indexOf(":")
+  if (sep < 0) return false
+  const salt = keyHash.slice(0, sep)
+  const stored = keyHash.slice(sep + 1)
+  try {
+    const derived = crypto.scryptSync(key, salt, 64).toString("hex")
+    return crypto.timingSafeEqual(Buffer.from(derived), Buffer.from(stored))
+  } catch (_) { return false }
+}
+
+// Iterate ALL operators even after a match — constant timing regardless of position.
+function lookupOperator(key) {
+  if (!key) {
+    try { crypto.scryptSync("x", "deadbeef00000000", 64) } catch (_) {}
+    return null
+  }
+  if (_registry && Array.isArray(_registry.operators) && _registry.operators.length > 0) {
+    let found = null
+    for (const op of _registry.operators) {
+      const match = _verifyKeyHash(key, op.keyHash || "")
+      if (match && !found) found = op
+    }
+    if (found) return found
+    return null
+  }
+  // No registry — ADMIN_API_KEY single-operator fallback.
+  if (ADMIN_API_KEY.length > 0) {
+    const maxLen = Math.max(key.length, ADMIN_API_KEY.length)
+    const a = Buffer.alloc(maxLen); Buffer.from(key).copy(a)
+    const b = Buffer.alloc(maxLen); Buffer.from(ADMIN_API_KEY).copy(b)
+    try { if (crypto.timingSafeEqual(a, b)) return { name: "default", role: "admin" } }
+    catch (_) {}
+  }
+  return null
+}
+
+function isAuthRequired() {
+  if (_registry && Array.isArray(_registry.operators) && _registry.operators.length > 0) return true
+  return ADMIN_API_KEY.length > 0
+}
+
+const AUTH_REQUIRED = isAuthRequired()
+const HOST = process.env.HOST || (AUTH_REQUIRED ? "0.0.0.0" : "127.0.0.1")
+
+if (!AUTH_REQUIRED) {
+  console.warn("\x1b[33m⚠  No operators.json and no ADMIN_API_KEY — running in OPEN dev mode.\x1b[0m")
+  console.warn("\x1b[33m   Bound to 127.0.0.1 only. Run: pnpm operator add <name>  before exposing.\x1b[0m")
+} else if (!_registry) {
+  console.log('\x1b[33m⚠  No operators.json — using ADMIN_API_KEY fallback (operator "default").\x1b[0m')
+  console.log('\x1b[33m   Run: pnpm operator add <name>  to create a named registry.\x1b[0m')
+} else if (HOST === "0.0.0.0") {
+  console.warn("\x1b[33m⚠  HOST=0.0.0.0 — server is reachable on all network interfaces.\x1b[0m")
+  console.warn("\x1b[33m   Behind a Cloudflare Tunnel, set HOST=127.0.0.1 instead.\x1b[0m")
 }
 
 function extractKey(req) {
@@ -109,16 +203,28 @@ function extractKey(req) {
 }
 
 function requireAuth(req, res, next) {
-  if (!AUTH_REQUIRED) return next()
-  if (timingSafeEqual(extractKey(req) || "", ADMIN_API_KEY)) return next()
+  if (!isAuthRequired()) {
+    req.operator = { name: "default", role: "admin" }
+    return next()
+  }
+  const key = extractKey(req) || ""
+  const op = lookupOperator(key)
+  if (op) {
+    req.operator = { name: op.name, role: op.role }
+    req.rawKey = key
+    if (_registry && Array.isArray(_registry.operators)) {
+      const live = _registry.operators.find(o => o.name === op.name)
+      if (live) live.lastSeenAt = new Date().toISOString()
+    }
+    return next()
+  }
   if (req.accepts("html") && !req.xhr) {
     return res.status(401).type("html").send(loginPageHtml(req.originalUrl))
   }
-  res.status(401).json({ error: "unauthorized", hint: "include Authorization: Bearer <ADMIN_API_KEY>, X-API-Key, or ?key=" })
+  res.status(401).json({ error: "unauthorized", hint: "include Authorization: Bearer <key>, X-Api-Key, or ?key=" })
 }
 
-// Inline login page used when a browser navigates to a gated route without a key.
-// Posts the key back, which we accept as ?key= on the redirect.
+// Inline login page — the name field is optional; key lookup probes all operators.
 function loginPageHtml(target) {
   const safeTarget = String(target || "/dashboard").replace(/[<>"]/g, "")
   return `<!doctype html><meta charset=utf-8><title>Authorize</title>
@@ -126,27 +232,37 @@ function loginPageHtml(target) {
   body{margin:0;background:#0b0d10;color:#e6edf3;font:14px/1.5 -apple-system,system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}
   form{background:#14181d;border:1px solid #2a313a;border-radius:8px;padding:20px;width:min(360px,90vw)}
   h1{margin:0 0 12px;font-size:16px}
-  input{width:100%;box-sizing:border-box;background:#1c2128;color:#e6edf3;border:1px solid #2a313a;border-radius:6px;padding:10px;font:inherit;margin:8px 0 12px}
+  label{color:#9aa4ae;font-size:12px;display:block;margin-bottom:2px}
+  input{width:100%;box-sizing:border-box;background:#1c2128;color:#e6edf3;border:1px solid #2a313a;border-radius:6px;padding:10px;font:inherit;margin:0 0 10px}
   button{background:#58a6ff;color:#061018;border:0;border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer;width:100%}
-  p{color:#9aa4ae;font-size:12px;margin:0 0 4px}
 </style>
 <form method=GET action="${safeTarget}">
-  <h1>Admin key required</h1>
-  <p>Enter ADMIN_API_KEY to continue.</p>
+  <h1>Operator key required</h1>
+  <label>Name <span style="color:#555">(optional)</span></label>
+  <input name=name type=text autocomplete=username placeholder="operator name" />
+  <label>Key</label>
   <input name=key type=password autofocus autocomplete=off />
   <button type=submit>Authorize</button>
 </form>`
 }
 
 // Append a system entry to the transcript so privileged actions are auditable.
-function auditEntry(text, sourceSocket) {
-  // Prefer CF-Connecting-IP (real client IP forwarded by Cloudflare Tunnel),
-  // then x-forwarded-for, then the socket's direct address.
-  const hdrs = sourceSocket?.handshake?.headers || {}
-  const ip = hdrs["cf-connecting-ip"] || hdrs["x-forwarded-for"] || sourceSocket?.handshake?.address || "unknown"
-  const id = "audit-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8)
+function auditEntry(text, source) {
+  let ip = "unknown"
+  let operatorName = "unknown"
+  if (source) {
+    if (source.handshake) {
+      const hdrs = source.handshake.headers || {}
+      ip = hdrs["cf-connecting-ip"] || hdrs["x-forwarded-for"] || source.handshake.address || "unknown"
+      operatorName = source.data?.operator?.name || "unknown"
+    } else if (source.operator) {
+      ip = source.ip || source.socket?.remoteAddress || "unknown"
+      operatorName = source.operator.name || "unknown"
+    }
+  }
+    const id = "audit-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8)
   const msg = {
-    id, agentId: -2, name: "audit", text: `${text}  (from ${ip})`,
+    id, agentId: -2, name: "audit", text: `${text} by ${operatorName} (from ${ip})`,
     timestamp: Date.now(), isAudit: true
   }
   spaceState.messages.push(msg)
@@ -157,38 +273,22 @@ function auditEntry(text, sourceSocket) {
 
 // Render a static HTML file with the auth key injected as window.AGENT_AUTH_KEY.
 // Used for trusted operator pages (alice, bob, dashboard, admin, builder).
-function sendWithAuthInjection(res, filename) {
+function sendWithAuthInjection(res, filename, rawKey) {
   const full = path.join(__dirname, "public", filename)
   let html
   try { html = fs.readFileSync(full, "utf8") }
   catch (e) { return res.status(404).type("text").send("not found") }
-  if (AUTH_REQUIRED) {
-    const inject = `<script>window.AGENT_AUTH_KEY=${JSON.stringify(ADMIN_API_KEY)};</script>`
+  if (isAuthRequired() && rawKey) {
+    const inject = `<script>window.AGENT_AUTH_KEY=${JSON.stringify(rawKey)};</script>`
     html = html.includes("</head>") ? html.replace("</head>", inject + "</head>") : inject + html
   }
   res.setHeader("Cache-Control", "no-store")
   res.type("html").send(html)
 }
 
-// Operator HTML files must never be served raw by express.static — they would
-// reach the client without window.AGENT_AUTH_KEY injected, and (worse) someone
-// could load the bare HTML to inspect operator-only UI before authenticating.
-const GATED_HTML = new Set([
-  "bob.html", "alice.html", "admin.html", "builder.html",
-  "server-agent1.html", "server-agent2.html",
-  "server-admin.html", "server-builder.html", "server-dashboard.html"
-])
-app.use((req, res, next) => {
-  if (req.method !== "GET" && req.method !== "HEAD") return next()
-  const m = req.path.match(/\/([^/]+\.html)$/i)
-  if (m && GATED_HTML.has(m[1].toLowerCase())) {
-    return requireAuth(req, res, () => sendWithAuthInjection(res, m[1]))
-  }
-  next()
-})
-
-// Static files in /public are public, but operator HTML is blocked above.
-// CSS/JS/images remain freely cached.
+// Static files in /public are public, but we explicitly exclude the operator
+// HTML pages (handled by gated routes below) so they only ship the key when
+// auth has been validated. CSS/JS/images remain freely cached.
 app.use(express.static(path.join(__dirname, "public"), {
   index: false,
   setHeaders: (res, p) => {
@@ -198,12 +298,13 @@ app.use(express.static(path.join(__dirname, "public"), {
 
 // Lightweight endpoint the dashboard uses to validate a key before storing it.
 app.post("/auth/check", (req, res) => {
-  if (!AUTH_REQUIRED) return res.json({ ok: true, auth: "open" })
-  if (timingSafeEqual(extractKey(req) || "", ADMIN_API_KEY)) return res.json({ ok: true, auth: "required" })
+  if (!isAuthRequired()) return res.json({ ok: true, auth: "open", name: "default", role: "admin" })
+  const op = lookupOperator(extractKey(req) || "")
+  if (op) return res.json({ ok: true, auth: "required", name: op.name, role: op.role })
   res.status(401).json({ ok: false, auth: "required" })
 })
 
-app.get("/auth/info", (req, res) => res.json({ authRequired: AUTH_REQUIRED }))
+app.get("/auth/info", (req, res) => res.json({ authRequired: isAuthRequired() }))
 
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")))
 app.get("/landing", (req, res) => res.sendFile(path.join(__dirname, "public", "landing.html")))
@@ -211,17 +312,21 @@ app.get("/landing", (req, res) => res.sendFile(path.join(__dirname, "public", "l
 // Trusted operator pages — require key (browser sees an inline login page on miss).
 // On hit, the page is rendered with window.AGENT_AUTH_KEY injected so its JS can
 // authenticate to Socket.IO and call privileged JSON endpoints.
-app.get("/bob",       requireAuth, (req, res) => sendWithAuthInjection(res, "bob.html"))
-app.get("/alice",     requireAuth, (req, res) => sendWithAuthInjection(res, "alice.html"))
-app.get("/admin",     requireAuth, (req, res) => sendWithAuthInjection(res, "admin.html"))
-app.get("/builder",   requireAuth, (req, res) => sendWithAuthInjection(res, "builder.html"))
+app.get("/bob",       requireAuth, (req, res) => sendWithAuthInjection(res, "bob.html", req.rawKey))
+app.get("/alice",     requireAuth, (req, res) => sendWithAuthInjection(res, "alice.html", req.rawKey))
+app.get("/admin",     requireAuth, (req, res) => sendWithAuthInjection(res, "admin.html", req.rawKey))
+app.get("/builder",      requireAuth, (req, res) => sendWithAuthInjection(res, "builder.html", req.rawKey))
+app.get("/server-agent1", requireAuth, (req, res) => sendWithAuthInjection(res, "server-agent1.html", req.rawKey))
+app.get("/server-agent2", requireAuth, (req, res) => sendWithAuthInjection(res, "server-agent2.html", req.rawKey))
 
 // Dashboard shell is intentionally public: the page renders a login modal and the
 // client posts the key to /auth/check. We still inject the key when the request
 // already carries a valid one (so a URL like /dashboard?key=… can deep-link).
 app.get("/dashboard", (req, res) => {
-  if (AUTH_REQUIRED && timingSafeEqual(extractKey(req) || "", ADMIN_API_KEY)) {
-    return sendWithAuthInjection(res, "dashboard.html")
+  if (isAuthRequired()) {
+    const key = extractKey(req) || ""
+    const op = lookupOperator(key)
+    if (op) return sendWithAuthInjection(res, "dashboard.html", key)
   }
   res.sendFile(path.join(__dirname, "public", "dashboard.html"))
 })
@@ -269,11 +374,8 @@ let pulseClientMap = {}
 })()
 
 function _execAsync(cmd) {
-  return new Promise((resolve, reject) => {
-    _exec(cmd, { timeout: 4000 }, (err, stdout) => {
-      if (err) reject(err)
-      else resolve(stdout || "")
-    })
+  return new Promise((resolve) => {
+    _exec(cmd, { timeout: 4000 }, (err, stdout) => resolve(err ? "" : (stdout || "")))
   })
 }
 
@@ -355,8 +457,6 @@ async function refreshPulse() {
   const now = Date.now()
   if (_pulseCache && now - _pulseAt < PULSE_CACHE_TTL) return _pulseCache
   try {
-    // Quick availability check — avoids running four slow pactl calls on hosts without pulseaudio.
-    await _execAsync("pactl --version")
     const [siRaw, sinksRaw, srcsRaw, soRaw] = await Promise.all([
       _execAsync("pactl list sink-inputs"),
       _execAsync("pactl list sinks"),
@@ -446,7 +546,7 @@ app.post("/kick/:agentId", requireAuth, (req, res) => {
   if (!target || !target.socketId) return res.status(404).json({ error: "agent not connected" })
   const instructions = (req.body && req.body.instructions) || null
   spaceNS.to(target.socketId).emit("kickAgent", { instructions })
-  auditEntry(`HTTP kick agent ${agentId}${instructions ? ` (with instructions, ${instructions.length} chars)` : ""}`)
+  auditEntry(`HTTP kick agent ${agentId}${instructions ? ` (with instructions, ${instructions.length} chars)` : ""}`, req)
   res.json({ ok: true, agentId })
 })
 
@@ -702,23 +802,24 @@ setWarnEmitter(spaceNS)
 server.on("upgrade", (req, socket, head) => {
   const pathname = req.url ? req.url.split("?")[0] : ""
   if (pathname.startsWith("/tts-ws/")) {
-    ttsWsRoute.handleUpgrade(req, socket, head, { ADMIN_API_KEY, AUTH_REQUIRED, timingSafeEqual })
+    ttsWsRoute.handleUpgrade(req, socket, head, { ADMIN_API_KEY, isAuthRequired, lookupOperator })
   }
 })
 
 // Reject Socket.IO connections that don't carry the admin key.
 // Accept via auth payload (preferred) or query string (fallback).
 spaceNS.use((socket, next) => {
-  if (!AUTH_REQUIRED) {
-    socket.data.role = "operator"
+  if (!isAuthRequired()) {
+    socket.data.operator = { name: "default", role: "admin" }
     return next()
   }
   const key =
     (socket.handshake.auth && socket.handshake.auth.key) ||
     (socket.handshake.query && socket.handshake.query.key) ||
     null
-  if (timingSafeEqual(String(key || ""), ADMIN_API_KEY)) {
-    socket.data.role = "operator"
+  const op = lookupOperator(String(key || ""))
+  if (op) {
+    socket.data.operator = { name: op.name, role: op.role }
     return next()
   }
   console.warn(`[Space] socket rejected (bad/missing key) from ${socket.handshake.address}`)
@@ -1072,18 +1173,6 @@ async function handleLLMResponse(socket, agentId, userText) {
   }
 }
 
-// ElevenLabs listen stream: keep connection open and push MP3 chunks from /tts/:agentId/stream.
-app.get("/listen/:agentId", requireAuth, (req, res) => {
-  const agentId = parseInt(req.params.agentId, 10)
-  if (agentId !== 0 && agentId !== 1) return res.status(400).end()
-  res.setHeader("Content-Type", "audio/mpeg")
-  res.setHeader("Cache-Control", "no-store")
-  res.setHeader("X-Accel-Buffering", "no")
-  if (!elListenSubs.has(agentId)) elListenSubs.set(agentId, new Set())
-  elListenSubs.get(agentId).add(res)
-  req.on("close", () => { if (elListenSubs.has(agentId)) elListenSubs.get(agentId).delete(res) })
-  // intentionally not calling res.end() — chunks are pushed from the TTS handler
-})
 
 spaceNS.on("connection", (socket) => {
   console.log("[Space] Client connected:", socket.id)
@@ -1251,6 +1340,7 @@ spaceNS.on("connection", (socket) => {
   })
 
   socket.on("userMessage", ({ text, from }) => {
+    if (socket.data.operator?.role !== "admin") { auditEntry("role rejected: userMessage", socket); return }
     if (typeof text !== "string" || !text.trim()) return
     const msg = { id: Date.now().toString(), agentId: -1, name: from || "User", text, timestamp: Date.now(), isUser: true }
     spaceState.messages.push(msg)
@@ -1278,9 +1368,14 @@ spaceNS.on("connection", (socket) => {
   // ElevenLabs streaming TTS — let operator change voice without redeploy.
   socket.on("setVoice", ({ agentId, voiceId }) => {
     const id = parseInt(agentId, 10)
-    if ((id !== 0 && id !== 1) || !voiceId) return
-    elevenVoiceIds[id] = String(voiceId)
-    spaceNS.emit("voiceUpdated", { agentId: id, voiceId: elevenVoiceIds[id] })
+    if (id !== 0 && id !== 1) return
+    const v = String(voiceId || "")
+    if (!VOICE_ID_RE.test(v)) return
+    if (elevenVoiceIds[id] === v) return
+    const prev = elevenVoiceIds[id]
+    elevenVoiceIds[id] = v
+    auditEntry(`voice change agent ${id}: ${prev} → ${v}`, socket)
+    spaceNS.emit("voiceUpdated", { agentId: id, voiceId: v })
   })
 
   // ── Listen-mode subscription management ──────────────────────────────────
@@ -1332,6 +1427,7 @@ spaceNS.on("connection", (socket) => {
   })
 
   socket.on("kickRequest", ({ agentId, instructions }) => {
+    if (socket.data.operator?.role !== "admin") { auditEntry("role rejected: kickRequest", socket); return }
     const target = spaceState.agents[agentId]
     if (!target || !target.socketId) return
     const safe = (typeof instructions === "string" && instructions.trim()) ? instructions.trim() : null
@@ -1340,6 +1436,7 @@ spaceNS.on("connection", (socket) => {
   })
 
   socket.on("promptUpdate", ({ agentId, instructions }) => {
+    if (socket.data.operator?.role !== "admin") { auditEntry("role rejected: promptUpdate", socket); return }
     if (typeof instructions !== "string" || !instructions.trim()) return
     const id = String(agentId)
     if (spacePrompts[id] !== undefined) {
@@ -1508,18 +1605,22 @@ if (X_SPACES_ENABLED) {
   // Socket.IO handlers for X Spaces control
   spaceNS.on("connection", (socket) => {
     socket.on("xspace:start", async () => {
+    if (socket.data.operator?.role !== "admin") { auditEntry("role rejected: xspace:start", socket); return }
       auditEntry("xspace:start", socket)
       try { await xSpaces.start() } catch (e) { socket.emit("xSpacesError", { error: e.message }) }
     })
     socket.on("xspace:join", async ({ spaceUrl }) => {
+    if (socket.data.operator?.role !== "admin") { auditEntry("role rejected: xspace:join", socket); return }
       auditEntry(`xspace:join ${String(spaceUrl || "").slice(0, 120)}`, socket)
       try { await xSpaces.joinSpace(spaceUrl) } catch (e) { socket.emit("xSpacesError", { error: e.message }) }
     })
     socket.on("xspace:leave", async () => {
+    if (socket.data.operator?.role !== "admin") { auditEntry("role rejected: xspace:leave", socket); return }
       auditEntry("xspace:leave", socket)
       try { await xSpaces.leaveSpace() } catch (e) { socket.emit("xSpacesError", { error: e.message }) }
     })
     socket.on("xspace:stop", async () => {
+    if (socket.data.operator?.role !== "admin") { auditEntry("role rejected: xspace:stop", socket); return }
       auditEntry("xspace:stop", socket)
       try { await xSpaces.stop() } catch (e) { socket.emit("xSpacesError", { error: e.message }) }
     })

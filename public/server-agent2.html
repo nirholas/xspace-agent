@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agent 2 - Alice</title>
+  <title>Swarm2</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -36,6 +36,8 @@
     .status-indicator.connected { background: #4ade80; }
     .status-indicator.speaking { background: #4ade80; animation: pulse 1s infinite; }
     .status-indicator.listening { background: #60a5fa; animation: pulse 1.5s infinite; }
+    .status-indicator.reconnecting { background: #fbbf24; animation: pulse 0.8s infinite; }
+    .log-panel p.warn { color: #fbbf24; }
     @keyframes pulse {
       0%, 100% { transform: scale(1); opacity: 1; }
       50% { transform: scale(1.2); opacity: 0.7; }
@@ -102,7 +104,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>🎤 Agent 2 - Alice</h1>
+    <h1>🎤 Swarm2</h1>
 
     <div class="turn-status" id="turnStatus">Waiting to connect...</div>
 
@@ -116,10 +118,11 @@
         <span>Status: </span>
         <strong id="agentStatus">Offline</strong>
       </div>
-      <div class="status-row" id="ttsRow" style="display:none; gap:10px;">
+      <div class="status-row" id="ttsRow" style="display:none; gap:10px; flex-wrap:wrap;">
         <span>Voice:</span>
         <select id="voicePicker" style="background:rgba(0,0,0,0.4); color:#fff; border:1px solid #4b5563; padding:6px 8px; border-radius:6px;"></select>
-        <span style="color:#9ca3af; font-size:0.85rem;">(ElevenLabs streaming)</span>
+        <button class="btn" id="voicePreviewBtn" style="padding:6px 14px; font-size:0.85rem;">&#9654; Preview</button>
+        <span id="voicePreviewError" style="color:#ef4444; font-size:0.8rem; align-self:center;"></span>
       </div>
       <div class="audio-meter">
         <div class="audio-level" id="audioLevel"></div>
@@ -132,12 +135,12 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/agent-common.js"></script>
-  <script src="/js/provider-openai-realtime.js"></script>
+  <script type="module" src="/js/provider-openai-realtime.js"></script>
   <script src="/js/provider-socket.js"></script>
   <script>
-    window.AGENT_CONFIG = { agentId: 1, agentName: "Alice", sessionEndpoint: "/session/1" }
+    window.AGENT_CONFIG = { agentId: 1, agentName: "Swarm2", sessionEndpoint: "/session/1" }
   </script>
-  <script src="/js/agent-loader.js"></script>
+  <script type="module" src="/js/agent-loader.js"></script>
 </body>
 </html>
 
