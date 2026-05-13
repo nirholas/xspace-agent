@@ -210,7 +210,7 @@ export async function isSSOEnforced(orgId: string): Promise<boolean> {
 
   // Also check OIDC (imported lazily to avoid circular deps)
   const db = getDatabase()
-  const { oidcConfigs } = await import('../db/schema')
+  const { oidcConfigs } = await import('../db/schema.js')
   const [oidc] = await db
     .select({ enforceSSO: oidcConfigs.enforceSSO })
     .from(oidcConfigs)

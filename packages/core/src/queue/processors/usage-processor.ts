@@ -16,7 +16,7 @@ export async function usageProcessor(job: Job<UsageAggregationJob>): Promise<{ r
   const { orgId, periodStart, periodEnd, metrics } = job.data
 
   // Import lazily to avoid circular dependency at module load time
-  const { UsageRepository } = await import('../../db')
+  const { UsageRepository } = await import('../../db/index.js')
 
   const repo = new UsageRepository()
   const start = new Date(periodStart)

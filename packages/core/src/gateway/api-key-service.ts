@@ -133,8 +133,8 @@ export class ApiKeyService {
     await this.invalidateCache(key.keyHash)
 
     // Update via direct DB (the repo doesn't have an update method, so we use the raw approach)
-    const { getDatabase } = await import('../db/connection')
-    const { apiKeys } = await import('../db/schema')
+    const { getDatabase } = await import('../db/connection.js')
+    const { apiKeys } = await import('../db/schema.js')
     const { eq, and } = await import('drizzle-orm')
 
     const db = getDatabase()
@@ -182,8 +182,8 @@ export class ApiKeyService {
 
     // Set old key to expire after grace period
     const previousKeyValidUntil = new Date(Date.now() + GRACE_PERIOD_MS)
-    const { getDatabase } = await import('../db/connection')
-    const { apiKeys } = await import('../db/schema')
+    const { getDatabase } = await import('../db/connection.js')
+    const { apiKeys } = await import('../db/schema.js')
     const { eq } = await import('drizzle-orm')
 
     const db = getDatabase()

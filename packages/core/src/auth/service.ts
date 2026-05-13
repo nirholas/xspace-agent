@@ -284,7 +284,7 @@ export async function createPasswordResetToken(email: string): Promise<string | 
   const tokenHash = sha256(token)
 
   // Store token hash in Redis with 1-hour expiry
-  const { setJSON } = await import('../db/redis')
+  const { setJSON } = await import('../db/redis.js')
   await setJSON(`password_reset:${tokenHash}`, { userId: user.id }, 3600)
 
   return token
@@ -296,7 +296,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
   const tokenHash = sha256(token)
 
-  const { getJSON } = await import('../db/redis')
+  const { getJSON } = await import('../db/redis.js')
   const data = await getJSON<{ userId: string }>(`password_reset:${tokenHash}`)
 
   if (!data) {
@@ -318,7 +318,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
   await revokeAllSessions(data.userId)
 
   // Delete the reset token
-  const { getRedis } = await import('../db/redis')
+  const { getRedis } = await import('../db/redis.js')
   await getRedis().del(`password_reset:${tokenHash}`)
 }
 
