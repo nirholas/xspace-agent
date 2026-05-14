@@ -1,0 +1,130 @@
+###############################################################################
+# Cloud Build pipeline — build, push, and deploy @xspace/server
+#
+# Triggers:
+#   - Push to main branch (auto-deploy)
+#   - Manual trigger (gcloud builds submit)
+#
+# Required substitutions (set in Cloud Build trigger config):
+#   _REGION      e.g. us-central1
+#   _PROJECT_ID  e.g. aerial-vehicle-466722-p5
+#   _SERVICE     e.g. xspace-server
+###############################################################################
+
+substitutions:
+  _REGION: us-central1
+  _PROJECT_ID: aerial-vehicle-466722-p5
+  _SERVICE: xspace-server
+  _REPO: xspace-server
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+steps:
+  # ── 1. Install dependencies ──────────────────────────────────────────────
+  - name: node:20-slim
+    id: install
+    entrypoint: npm
+    args: [ci, --workspace=packages/core, --workspace=packages/server]
+
+  # ── 2. Type check ─────────────────────────────────────────────────────────
+  - name: node:20-slim
+    id: typecheck
+    entrypoint: npm
+    args: [run, typecheck]
+    waitFor: [install]
+
+  # ── 3. Lint ───────────────────────────────────────────────────────────────
+  - name: node:20-slim
+    id: lint
+    entrypoint: npm
+    args: [run, lint]
+    waitFor: [install]
+
+  # ── 4. Unit tests ─────────────────────────────────────────────────────────
+  - name: node:20-slim
+    id: test
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        cd packages/core
+        npx vitest run --reporter=verbose 2>&1 | tail -30
+    waitFor: [install]
+
+  # ── 5. Build server ───────────────────────────────────────────────────────
+  - name: node:20-slim
+    id: build
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        cd packages/core && npm run build
+        cd ../server && npm run build
+    waitFor: [typecheck, lint, test]
+
+  # ── 6. Build Docker image ─────────────────────────────────────────────────
+  - name: gcr.io/cloud-builders/docker
+    id: docker-build
+    args:
+      - build
+      - --platform=linux/amd64
+      - --cache-from=${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO}/server:latest
+      - --tag=${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO}/server:$COMMIT_SHA
+      - --tag=${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO}/server:latest
+      - --file=docker/Dockerfile
+      - .
+    waitFor: [build]
+
+  # ── 7. Push image to Artifact Registry ───────────────────────────────────
+  - name: gcr.io/cloud-builders/docker
+    id: docker-push-sha
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO}/server:$COMMIT_SHA
+    waitFor: [docker-build]
+
+  - name: gcr.io/cloud-builders/docker
+    id: docker-push-latest
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO}/server:latest
+    waitFor: [docker-push-sha]
+
+  # ── 8. Deploy to Cloud Run ────────────────────────────────────────────────
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: deploy
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO}/server:$COMMIT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --quiet
+    waitFor: [docker-push-sha]
+
+  # ── 9. Verify rollout ─────────────────────────────────────────────────────
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: verify
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        URL=$(gcloud run services describe ${_SERVICE} \
+          --region=${_REGION} --format="value(status.url)")
+        echo "Deployed to: $URL"
+        # Health check
+        STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$URL/health" || echo "000")
+        if [ "$STATUS" != "200" ]; then
+          echo "Health check failed with status $STATUS"
+          exit 1
+        fi
+        echo "Health check passed (HTTP $STATUS)"
+    waitFor: [deploy]
+
+images:
+  - ${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO}/server:$COMMIT_SHA
+  - ${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO}/server:latest

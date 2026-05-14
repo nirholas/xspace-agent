@@ -33,6 +33,27 @@ provider "google" {
 }
 
 ###############################################################################
+# Required GCP APIs
+# Enable these once on a fresh project. terraform apply is idempotent.
+###############################################################################
+
+resource "google_project_service" "apis" {
+  for_each = toset([
+    "compute.googleapis.com",
+    "iam.googleapis.com",
+    "iap.googleapis.com",
+    "monitoring.googleapis.com",
+    "logging.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
+  ])
+
+  service                    = each.value
+  disable_dependent_services = false
+  # Do not disable APIs when resources are destroyed — other things may use them
+  disable_on_destroy = false
+}
+
+###############################################################################
 # Service Account
 ###############################################################################
 
@@ -40,6 +61,8 @@ resource "google_service_account" "swarm_agent_sa" {
   account_id   = "swarm-agent-vm"
   display_name = "swarm-agent VM service account"
   description  = "Minimal SA for the xspace-agent swarm VM"
+
+  depends_on = [google_project_service.apis]
 }
 
 # Logging — required for structured logs to Cloud Logging
@@ -126,8 +149,10 @@ resource "google_compute_instance" "swarm_agent" {
     # enable-oslogin = "TRUE"
   }
 
-  # Ensure the SA bindings exist before the VM boots and tries to use them
+  # Ensure the SA bindings exist before the VM boots and tries to use them,
+  # and that all required APIs are enabled first.
   depends_on = [
+    google_project_service.apis,
     google_project_iam_member.swarm_agent_log_writer,
     google_project_iam_member.swarm_agent_metric_writer,
     google_project_iam_member.swarm_agent_storage_viewer,

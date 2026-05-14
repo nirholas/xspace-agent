@@ -38,3 +38,9 @@ variable "ssh_public_key" {
   type        = string
   # Set in terraform.tfvars — do not hard-code here
 }
+
+variable "app_domain" {
+  description = "Custom domain for the Cloud Run service (e.g. app.xspaceagent.com)"
+  type        = string
+  default     = "app.xspaceagent.com"
+}
