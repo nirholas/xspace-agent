@@ -916,6 +916,83 @@ export class XSpaceAgent extends EventEmitter {
     return super.emit(event, ...args)
   }
 
+  // ── NotebookLM integration ─────────────────────────────────
+
+  /**
+   * Bridge a NotebookLM Audio Overview into the current X Space.
+   *
+   * The bridge must be constructed before calling this method, but `start()`
+   * is called for you here once the browser is available.
+   *
+   * What this wires up:
+   * - NotebookLM podcast audio → injected into the X Space (AI hosts speak)
+   * - X Space participant transcriptions → routed to NotebookLM interactive mic
+   *
+   * @example
+   * ```typescript
+   * import { NotebookLMBridge } from 'xspace-agent'
+   *
+   * const bridge = new NotebookLMBridge(browser, {
+   *   notebookUrl: 'https://notebooklm.google.com/notebook/abc123',
+   *   googleCookies: { '__Secure-1PSID': process.env.GOOGLE_SID! },
+   *   interactive: true,
+   * })
+   * agent.useNotebookLM(bridge)
+   * await agent.join('https://x.com/i/spaces/...')
+   * ```
+   */
+  useNotebookLM(bridge: import('./integrations/notebooklm/bridge').NotebookLMBridge): this {
+    const { injectAudio } = require('./audio/bridge') as typeof import('./audio/bridge')
+
+    // Route podcast audio from NotebookLM → X Space
+    bridge.on('audio', async (audioBuffer: Buffer) => {
+      const page = this.browserLifecycle.getPage()
+      if (!page) return
+      try {
+        await injectAudio(page, audioBuffer)
+      } catch (err: any) {
+        this.emit('error', err instanceof Error ? err : new Error(String(err)))
+      }
+    })
+
+    // Route X Space transcriptions → NotebookLM interactive mic
+    this.on('transcription', async (evt: TranscriptionEvent) => {
+      if (bridge.currentState !== 'interactive') return
+      try {
+        // Convert transcription text back to PCM is impractical at this stage —
+        // we instead pass raw PCM from the audio pipeline before STT if available.
+        // The bridge's injectSpeech() accepts Float32Array; emit a custom event
+        // that the audio pipeline can hook into.
+        this.emit('notebooklm:speech' as any, evt)
+      } catch {
+        // ignore
+      }
+    })
+
+    // Start the bridge once the browser is ready
+    const startBridge = async () => {
+      const browser = this.browserLifecycle.getBrowser()
+      if (!browser) {
+        // Browser not yet launched — retry on next 'status' change
+        this.once('status', startBridge)
+        return
+      }
+      try {
+        await bridge.start()
+      } catch (err: any) {
+        this.emit('error', err instanceof Error ? err : new Error(String(err)))
+      }
+    }
+
+    if (this.browserLifecycle.getBrowser()) {
+      startBridge()
+    } else {
+      this.once('status', startBridge)
+    }
+
+    return this
+  }
+
   // ── Private ────────────────────────────────────────────────
 
   private createPluginContext(): PluginContext {

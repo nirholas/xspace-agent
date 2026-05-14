@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: xspace-agent-server
+  namespace: xspace-agent
+  labels:
+    app: xspace-agent
+    component: server
+  annotations:
+    # Enable NEG for GKE Ingress with container-native load balancing
+    cloud.google.com/neg: '{"ingress": true}'
+spec:
+  type: ClusterIP
+  selector:
+    app: xspace-agent
+    component: server
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP

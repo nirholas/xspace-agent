@@ -336,6 +336,10 @@ export class BrowserLifecycle {
     return this.page
   }
 
+  getBrowser(): import('puppeteer').Browser | null {
+    return this.browserManager?.browser ?? null
+  }
+
   getSelectorEngine(): SelectorEngine {
     return this.selectorEngine
   }

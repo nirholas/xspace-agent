@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xspace-agent-server
+  namespace: xspace-agent
+  labels:
+    app: xspace-agent
+    component: server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: xspace-agent
+      component: server
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Zero-downtime deploys
+  template:
+    metadata:
+      labels:
+        app: xspace-agent
+        component: server
+    spec:
+      serviceAccountName: xspace-agent-sa
+
+      # Spread replicas across nodes for HA
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: xspace-agent
+              component: server
+
+      containers:
+        - name: server
+          # Replace with your Artifact Registry image path after first push:
+          # us-central1-docker.pkg.dev/aerial-vehicle-466722-p5/xspace-agent/server:latest
+          image: us-central1-docker.pkg.dev/PROJECT_ID/xspace-agent/server:latest
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+
+          resources:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3000"
+            - name: HEADLESS
+              value: "true"
+            - name: AI_PROVIDER
+              value: openai
+            - name: TTS_PROVIDER
+              value: elevenlabs
+            - name: STT_PROVIDER
+              value: groq
+
+          # Secrets from Secret Manager mounted as env vars.
+          # Requires the Secrets Store CSI Driver or External Secrets Operator.
+          # If using plain Kubernetes Secrets, reference them as secretKeyRef instead.
+          envFrom:
+            - secretRef:
+                name: xspace-agent-secrets  # Created by external-secrets or manually
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          lifecycle:
+            preStop:
+              exec:
+                # Give in-flight requests time to drain before SIGTERM
+                command: ["/bin/sh", "-c", "sleep 5"]
+
+      terminationGracePeriodSeconds: 30
+
+      # Prevent scheduling on preemptible/spot nodes for production
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: cloud.google.com/gke-spot
+                    operator: NotIn
+                    values: ["true"]

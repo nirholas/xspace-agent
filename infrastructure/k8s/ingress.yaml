@@ -1,0 +1,73 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: xspace-agent-ingress
+  namespace: xspace-agent
+  labels:
+    app: xspace-agent
+  annotations:
+    # GKE-managed external Application Load Balancer
+    kubernetes.io/ingress.class: "gce"
+
+    # Reserve a static external IP: create first with
+    #   gcloud compute addresses create xspace-agent-ingress-ip --global
+    # then set it here:
+    kubernetes.io/ingress.global-static-ip-name: "xspace-agent-ingress-ip"
+
+    # GKE-managed TLS certificate for the domain below
+    networking.gke.io/managed-certificates: "xspace-agent-cert"
+
+    # Force HTTPS redirect at the load balancer level
+    kubernetes.io/ingress.allow-http: "false"
+
+    # Enable HTTP/2 for better streaming performance
+    cloud.google.com/backend-config: '{"default": "xspace-agent-backend-config"}'
+spec:
+  # Replace with your actual domain
+  # tls:
+  #   - hosts:
+  #       - app.xspaceagent.com
+  #     secretName: xspace-agent-tls  # Only needed for manual certs; use managed-certificates instead
+
+  rules:
+    - host: app.xspaceagent.com  # Replace with your domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: xspace-agent-server
+                port:
+                  number: 3000
+
+---
+# GKE Managed Certificate — Google provisions and auto-renews TLS
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: xspace-agent-cert
+  namespace: xspace-agent
+spec:
+  domains:
+    - app.xspaceagent.com  # Replace with your actual domain
+
+---
+# Backend config for connection draining and health check tuning
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: xspace-agent-backend-config
+  namespace: xspace-agent
+spec:
+  connectionDraining:
+    drainingTimeoutSec: 30
+  healthCheck:
+    checkIntervalSec: 15
+    timeoutSec: 5
+    healthyThreshold: 1
+    unhealthyThreshold: 2
+    type: HTTP
+    requestPath: /health
+    port: 3000
+  timeoutSec: 60  # Allow long-running WebSocket/SSE connections

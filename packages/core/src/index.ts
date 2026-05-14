@@ -862,4 +862,13 @@ export type {
   ValidationResult,
 } from './builder'
 
+// NotebookLM integration
+export { NotebookLMBridge } from './integrations/notebooklm/bridge'
+export type {
+  NotebookLMConfig,
+  NotebookLMState,
+  NotebookLMBridgeEvents,
+  GoogleCookies,
+} from './integrations/notebooklm/types'
+
 
