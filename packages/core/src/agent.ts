@@ -124,11 +124,19 @@ export class XSpaceAgent extends EventEmitter {
 
     this.llm = createLLM(config.ai)
 
-    // STT provider
-    const sttConfig: STTConfig = {
-      provider: config.ai.provider === 'openai' ? 'openai' : 'groq',
-      apiKey: config.ai.apiKey || '',
-    }
+    // STT provider — use explicit transcription config if provided, otherwise auto-select
+    const sttConfig: STTConfig = config.transcription
+      ? {
+          provider: config.transcription.provider,
+          apiKey: config.transcription.apiKey || config.ai.apiKey || '',
+          projectId: config.transcription.projectId,
+          languageCode: config.transcription.languageCode,
+          model: config.transcription.model,
+        }
+      : {
+          provider: config.ai.provider === 'openai' ? 'openai' : 'groq',
+          apiKey: config.ai.apiKey || '',
+        }
     const stt = createSTT(sttConfig)
     this.sttProvider = stt
 

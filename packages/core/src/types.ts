@@ -34,6 +34,8 @@ export interface AgentConfig {
   ai: AIConfig;
   /** Text-to-speech configuration. */
   voice?: VoiceConfig;
+  /** Speech-to-text (transcription) configuration. Auto-selected if omitted. */
+  transcription?: TranscriptionConfig;
   /** Browser launch and connection options. */
   browser?: BrowserConfig;
   /** Agent conversation behavior tuning. */
@@ -102,7 +104,7 @@ export interface AuthConfig {
  */
 export interface AIConfig {
   /** LLM provider to use. */
-  provider: 'openai' | 'claude' | 'groq' | 'custom';
+  provider: 'openai' | 'claude' | 'groq' | 'gemini' | 'custom';
   /** Model identifier (e.g. `'gpt-4o'`, `'claude-sonnet-4-20250514'`). Provider default used if omitted. */
   model?: string;
   /** API key for the chosen provider. */
@@ -150,7 +152,7 @@ export interface AIConfig {
  */
 export interface VoiceConfig {
   /** TTS provider to use. `'browser'` delegates synthesis to the client. */
-  provider: 'elevenlabs' | 'openai' | 'groq' | 'browser';
+  provider: 'elevenlabs' | 'openai' | 'groq' | 'browser' | 'google';
   /** API key for the TTS provider (not needed for `'browser'`). */
   apiKey?: string;
   /** Voice identifier — meaning depends on the provider. */
@@ -161,6 +163,36 @@ export interface VoiceConfig {
   stability?: number;
   /** Fallback TTS providers tried in order if the primary fails. */
   fallback?: VoiceConfig[];
+}
+
+/**
+ * Speech-to-text (transcription) provider configuration.
+ *
+ * When omitted, the provider is auto-selected based on the AI provider
+ * (openai → openai-whisper, anything else → groq-whisper).
+ *
+ * @example
+ * ```typescript
+ * // Use Google Cloud STT with Chirp 2 (best accuracy for noisy spaces)
+ * const transcription: TranscriptionConfig = {
+ *   provider: 'google',
+ *   apiKey: process.env.GOOGLE_API_KEY!,
+ *   projectId: process.env.GOOGLE_PROJECT_ID!, // enables Chirp 2
+ *   languageCode: 'en-US',
+ * };
+ * ```
+ */
+export interface TranscriptionConfig {
+  /** STT provider to use. */
+  provider: 'groq' | 'openai' | 'google';
+  /** API key for the provider. Falls back to `ai.apiKey` if omitted. */
+  apiKey?: string;
+  /** BCP-47 language code (default: 'en-US'). Google only. */
+  languageCode?: string;
+  /** GCP project ID — enables Chirp 2 via the v2 API. Google only. */
+  projectId?: string;
+  /** Model override. Google only (default: 'chirp_2' with projectId, 'chirp' without). */
+  model?: string;
 }
 
 /**

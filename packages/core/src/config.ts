@@ -28,7 +28,7 @@ const AuthConfigSchema = z
 
 /** Zod schema for {@link AIConfig}. */
 const AIConfigSchema = z.object({
-  provider: z.enum(['openai', 'claude', 'groq', 'custom']),
+  provider: z.enum(['openai', 'claude', 'groq', 'gemini', 'custom']),
   model: z.string().optional(),
   apiKey: z.string().optional(),
   systemPrompt: z.string().min(1, 'systemPrompt is required'),
@@ -53,11 +53,20 @@ const AIConfigSchema = z.object({
 
 /** Zod schema for {@link VoiceConfig}. */
 const VoiceConfigSchema = z.object({
-  provider: z.enum(['elevenlabs', 'openai', 'browser']),
+  provider: z.enum(['elevenlabs', 'openai', 'browser', 'groq', 'google']),
   apiKey: z.string().optional(),
   voiceId: z.string().optional(),
   speed: z.number().min(0.25).max(4.0).optional(),
   stability: z.number().min(0).max(1).optional(),
+});
+
+/** Zod schema for {@link TranscriptionConfig}. */
+const TranscriptionConfigSchema = z.object({
+  provider: z.enum(['groq', 'openai', 'google']),
+  apiKey: z.string().optional(),
+  languageCode: z.string().optional(),
+  projectId: z.string().optional(),
+  model: z.string().optional(),
 });
 
 /** Zod schema for {@link BrowserConfig}. */
@@ -96,6 +105,7 @@ export const AgentConfigSchema = z.object({
   auth: AuthConfigSchema,
   ai: AIConfigSchema,
   voice: VoiceConfigSchema.optional(),
+  transcription: TranscriptionConfigSchema.optional(),
   browser: BrowserConfigSchema.optional(),
   behavior: BehaviorConfigSchema.optional(),
   logger: z.any().optional(),

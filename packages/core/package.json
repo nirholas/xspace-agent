@@ -82,6 +82,8 @@
   "license": "UNLICENSED",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
+    "@google-cloud/run": "^3.2.1",
+    "@google-cloud/secret-manager": "^6.1.2",
     "@node-saml/passport-saml": "^5.0.0",
     "axios": "^1.6.0",
     "bcryptjs": "^2.4.3",
@@ -126,5 +128,3 @@
     "vitest": "^4.1.0"
   }
 }
-
-

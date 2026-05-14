@@ -28,15 +28,26 @@ const DEFAULT_GROQ_VOICE_MAP: Record<number, string> = {
   1: 'Zephyr-PlayAI',
 }
 
+/**
+ * Default Google Cloud TTS voice mapping per agent index.
+ * Studio voices are the highest-quality tier — near-human quality.
+ * See https://cloud.google.com/text-to-speech/docs/voices for the full list.
+ */
+const DEFAULT_GOOGLE_VOICE_MAP: Record<number, string> = {
+  0: 'en-US-Studio-O',  // Male Studio voice
+  1: 'en-US-Studio-Q',  // Female Studio voice
+}
+
 // Pricing per character
 const TTS_PRICING: Record<string, number> = {
   'openai-tts': 0.000015,
   'elevenlabs-tts': 0.000030,
   'groq-tts': 0.000010,
+  'google-tts': 0.000160,  // Studio voices — $160/1M chars
 }
 
 export interface TTSConfig {
-  provider: 'elevenlabs' | 'openai' | 'groq' | 'browser'
+  provider: 'elevenlabs' | 'openai' | 'groq' | 'browser' | 'google'
   apiKey?: string
   voiceId?: string
   speed?: number
@@ -199,6 +210,92 @@ export function createTTS(config: TTSConfig): TTSProvider {
             headers: { 'xi-api-key': apiKey! },
             timeout: 5000,
           })
+          return { ok: res.status >= 200 && res.status < 300, latencyMs: Date.now() - start }
+        } catch (err: any) {
+          return { ok: false, latencyMs: Date.now() - start, error: err?.message ?? String(err) }
+        }
+      },
+    }
+  }
+
+  // provider === 'google'
+  if (provider === 'google') {
+    const googleVoiceMap: Record<number, string> = {
+      ...DEFAULT_GOOGLE_VOICE_MAP,
+      ...voiceMap,
+    }
+    const metrics = createTTSMetrics()
+    const log = getAppLogger('tts')
+
+    return {
+      name: 'google-tts',
+
+      async synthesize(text: string, agentId: number = 0): Promise<Buffer | null> {
+        if (!apiKey) return null
+        const start = Date.now()
+
+        const voiceName = googleVoiceMap[agentId] ?? googleVoiceMap[0]
+        // Derive languageCode from voice name (e.g. 'en-US-Studio-O' → 'en-US')
+        const languageCode = voiceName.split('-').slice(0, 2).join('-')
+        const m = getMetrics()
+        const labels = { provider: 'google' }
+
+        try {
+          const response = await axios.post(
+            `https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(apiKey)}`,
+            {
+              input: { text },
+              voice: { languageCode, name: voiceName },
+              audioConfig: {
+                audioEncoding: 'MP3',
+                speakingRate: config.speed ?? 1.0,
+                pitch: 0.0,
+              },
+            },
+            {
+              headers: { 'Content-Type': 'application/json' },
+              timeout: 30_000,
+            },
+          )
+
+          const latencyMs = Date.now() - start
+          metrics.requestCount++
+          metrics.successCount++
+          metrics.avgLatencyMs =
+            (metrics.avgLatencyMs * (metrics.requestCount - 1) + latencyMs) / metrics.requestCount
+
+          m.counter('xspace_tts_requests_total', 'Total TTS requests', labels)
+          m.histogram('xspace_tts_latency_ms', latencyMs, 'TTS request latency', labels)
+          m.histogram('xspace_tts_characters', text.length, 'Characters synthesized', labels)
+          log.debug({ provider: 'google', voiceName, latencyMs, chars: text.length }, 'TTS synthesis completed')
+
+          const audioContent: string = response.data.audioContent
+          return Buffer.from(audioContent, 'base64')
+        } catch (err) {
+          metrics.requestCount++
+          metrics.errorCount++
+          m.counter('xspace_tts_requests_total', 'Total TTS requests', labels)
+          m.counter('xspace_tts_errors_total', 'TTS request errors', labels)
+          log.error({ err, provider: 'google' }, 'TTS synthesis failed')
+          throw err
+        }
+      },
+
+      getMetrics(): ProviderMetrics {
+        return { ...metrics }
+      },
+
+      estimateCost(characterCount: number): number {
+        return characterCount * (TTS_PRICING['google-tts'] ?? 0)
+      },
+
+      async checkHealth(): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
+        const start = Date.now()
+        try {
+          const res = await axios.get(
+            `https://texttospeech.googleapis.com/v1/voices?key=${encodeURIComponent(apiKey!)}`,
+            { timeout: 5_000 },
+          )
           return { ok: res.status >= 200 && res.status < 300, latencyMs: Date.now() - start }
         } catch (err: any) {
           return { ok: false, latencyMs: Date.now() - start, error: err?.message ?? String(err) }

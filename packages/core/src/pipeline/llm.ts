@@ -37,6 +37,11 @@ const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   'llama-3.1-70b-versatile': 128_000,
   'llama-3.1-8b-instant': 128_000,
   'mixtral-8x7b-32768': 32_768,
+  // Gemini
+  'gemini-2.0-flash': 1_048_576,
+  'gemini-2.0-flash-lite': 1_048_576,
+  'gemini-2.5-flash-preview-05-20': 1_048_576,
+  'gemini-2.5-pro-preview-05-06': 1_048_576,
 }
 const DEFAULT_CONTEXT_LIMIT = 8_192
 
@@ -596,10 +601,36 @@ export function createLLM(config: AIConfig): LLMProvider {
         isMini ? 0.60 : 10.00,
       )
     }
+    case 'gemini': {
+      // Gemini exposes an OpenAI-compatible endpoint — no extra SDK needed.
+      const model = config.model || 'gemini-2.0-flash'
+      const isPro = model.includes('pro')
+      const isFlashLite = model.includes('lite')
+      let inputPrice: number
+      let outputPrice: number
+      if (isPro) {
+        inputPrice = 1.25   // $1.25/1M input tokens (≤200k context)
+        outputPrice = 10.00 // $10.00/1M output tokens
+      } else if (isFlashLite) {
+        inputPrice = 0.075
+        outputPrice = 0.30
+      } else {
+        inputPrice = 0.075  // gemini-2.0-flash / gemini-2.5-flash
+        outputPrice = 0.30
+      }
+      return createOpenAICompatibleProvider(
+        config,
+        'https://generativelanguage.googleapis.com/v1beta/openai',
+        model,
+        isPro ? 'gemini-pro' : 'gemini-flash',
+        inputPrice,
+        outputPrice,
+      )
+    }
     case 'custom':
       return createCustomLLM(config)
     default:
-      throw new ProviderError(config.provider, 'initialization', `Unsupported LLM provider: ${config.provider}. Supported: openai, claude, groq, custom`)
+      throw new ProviderError(config.provider, 'initialization', `Unsupported LLM provider: ${config.provider}. Supported: openai, claude, groq, gemini, custom`)
   }
 }
 
