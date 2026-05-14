@@ -19,13 +19,15 @@
   },
   "license": "UNLICENSED",
   "dependencies": {
-    "xspace-agent": "workspace:*",
+    "@types/stripe": "^8.0.417",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "helmet": "^8.0.0",
     "multer": "^1.4.5-lts.1",
     "socket.io": "^4.7.5",
+    "stripe": "^22.1.1",
+    "xspace-agent": "workspace:*",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -40,5 +42,3 @@
     "vitest": "^3.2.1"
   }
 }
-
-

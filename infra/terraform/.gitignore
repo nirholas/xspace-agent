@@ -1,0 +1,28 @@
+# Terraform state — contains sensitive resource IDs and potentially secrets.
+# Store state in GCS backend for team use (see backend block in main.tf).
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfstate.d/
+
+# Terraform working directory — generated on `terraform init`
+.terraform/
+.terraform.lock.hcl
+
+# Variable values — contain secrets (API keys, SSH keys, email addresses).
+# Use terraform.tfvars.example as the template; never commit actual values.
+terraform.tfvars
+*.auto.tfvars
+
+# Plan files — may embed sensitive values
+*.tfplan
+tfplan
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Override files (local developer overrides)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

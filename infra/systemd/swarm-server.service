@@ -1,0 +1,60 @@
+[Unit]
+Description=xspace-agent swarm server
+Documentation=https://github.com/nirholas/xspace-agent
+# Wait for network, display, and audio before starting.
+# pulseaudio-system.service must be up so Chrome can route audio to virtual sinks.
+After=network-online.target pulseaudio-system.service xvfb.service
+Wants=network-online.target pulseaudio-system.service xvfb.service
+# If the audio or display services fail we still try to start — they may recover.
+# Remove the Wants= deps if you want strict ordering.
+
+[Service]
+Type=simple
+User=agent
+Group=agent
+WorkingDirectory=/home/agent/ai-agents-x-space
+
+# EnvironmentFile loads .env (must exist; use "-" prefix to make it optional)
+EnvironmentFile=-/home/agent/.env
+
+# Inherited environment tweaks
+Environment=NODE_ENV=production
+# Virtual display created by xvfb.service
+Environment=DISPLAY=:99
+# Connect Chrome audio to the system PulseAudio socket
+Environment=PULSE_SERVER=unix:/var/run/pulse/native
+# Increase Node.js heap for processing many concurrent audio streams
+Environment=NODE_OPTIONS=--max-old-space-size=4096
+
+ExecStart=/usr/bin/node server.js
+
+# Graceful reload: send SIGHUP to re-read config without full restart
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Always restart on any exit — Chrome crashes, OOM, etc.
+Restart=always
+RestartSec=5
+
+# Circuit breaker: if it crashes 5 times in 60s, stop trying and alert.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Graceful shutdown: SIGTERM → wait up to 30s → SIGKILL
+KillSignal=SIGTERM
+TimeoutStopSec=30
+# mixed: sends SIGTERM to the main process, SIGKILL to all remaining
+KillMode=mixed
+FinalKillSignal=SIGKILL
+
+# Raise file descriptor limit — Socket.IO + 4 Chrome CDP connections
+LimitNOFILE=65536
+
+# Prevent core dumps from leaking secrets
+LimitCORE=0
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=swarm-server
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,43 @@
+[Unit]
+Description=X Virtual Frame Buffer — display :99 (headless Chrome)
+Documentation=man:Xvfb(1)
+# Start before anything that needs DISPLAY=:99
+Before=swarm-server.service pulseaudio-system.service
+After=network.target
+
+[Service]
+Type=simple
+
+# 1280x800 at 24-bit color — enough for Chrome's UI rendering.
+# +extension RANDR   — required by some Chrome codecs
+# +extension GLX     — GPU-adjacent extensions (software rendering)
+# +render            — XRender extension (CSS compositing)
+# -noreset           — keep Xvfb alive when last client disconnects
+# -ac                — disable access control (all local connections allowed)
+ExecStart=/usr/bin/Xvfb :99 \
+  -screen 0 1280x800x24 \
+  -ac \
+  +extension RANDR \
+  +extension GLX \
+  +render \
+  -noreset
+
+# Give Xvfb a moment to create the socket before dependents start
+ExecStartPost=/bin/sleep 1
+
+# Xvfb doesn't need privileges — run as nobody for isolation
+User=nobody
+Group=nogroup
+
+Restart=always
+RestartSec=3
+# Don't keep restarting indefinitely if Xvfb is fundamentally broken
+StartLimitIntervalSec=60
+StartLimitBurst=10
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=xvfb
+
+[Install]
+WantedBy=multi-user.target

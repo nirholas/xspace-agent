@@ -540,6 +540,154 @@ app.get("/x-tab-url", requireAuth, async (req, res) => {
   }
 })
 
+// ===== CHROME CDP WATCHDOG =====
+
+const WATCHDOG_INTERVAL_MS = Number(process.env.WATCHDOG_INTERVAL_MS) || 30000
+const WATCHDOG_SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000
+
+// Per-port state: portName -> { alive, lastAliveAt, url, isSpace, isLoginPage, lastChecked }
+const xTabHealthState = {}
+
+async function chromeCdpHealth() {
+  const ports = {
+    agent1: Number(process.env.CDP_AGENT1_PORT || 9222),
+    xTab1:  Number(process.env.CDP_XTAB1_PORT  || 9223),
+    agent2: Number(process.env.CDP_AGENT2_PORT  || 9224),
+    xTab2:  Number(process.env.CDP_XTAB2_PORT   || 9225),
+  }
+  const results = await Promise.allSettled(
+    Object.entries(ports).map(async ([name, port]) => {
+      try {
+        const res = await fetch(`http://127.0.0.1:${port}/json/version`, {
+          signal: AbortSignal.timeout(1000)
+        })
+        const json = await res.json()
+        return [name, { alive: true, version: json.Browser || json.webSocketDebuggerUrl || "ok", error: null }]
+      } catch (e) {
+        return [name, { alive: false, version: null, error: e.message }]
+      }
+    })
+  )
+  const portStatus = {}
+  for (const r of results) {
+    if (r.status === "fulfilled") {
+      const [name, val] = r.value
+      portStatus[name] = val
+    }
+  }
+  return { ports: portStatus, timestamp: Date.now() }
+}
+
+async function xTabStatus() {
+  if (!_puppeteer) return {}
+  const xTabPorts = {
+    xTab1: Number(process.env.CDP_XTAB1_PORT || 9223),
+    xTab2: Number(process.env.CDP_XTAB2_PORT || 9225),
+  }
+  const results = await Promise.allSettled(
+    Object.entries(xTabPorts).map(async ([name, port]) => {
+      let b = null
+      try {
+        const endpoint = `http://127.0.0.1:${port}`
+        const connectP = _puppeteer.connect({ browserURL: endpoint, defaultViewport: null })
+        const timeoutP = new Promise((_, rej) => setTimeout(() => rej(new Error("connect timeout")), 3000))
+        b = await Promise.race([connectP, timeoutP])
+        const pages = await b.pages()
+        let url = null
+        let title = null
+        for (const p of pages) {
+          try {
+            const u = p.url()
+            if (u && u !== "about:blank") { url = u; title = await p.title(); break }
+          } catch (_) {}
+        }
+        const isSpace = Boolean(url && url.includes("/i/spaces/"))
+        const isLoginPage = Boolean(url && (url.includes("x.com/login") || url.includes("twitter.com/login")))
+        return [name, { url, title, isSpace, isLoginPage, error: null }]
+      } catch (e) {
+        return [name, { url: null, title: null, isSpace: false, isLoginPage: false, error: e.message }]
+      } finally {
+        if (b) { try { b.disconnect() } catch (_) {} }
+      }
+    })
+  )
+  const tabStatus = {}
+  for (const r of results) {
+    if (r.status === "fulfilled") {
+      const [name, val] = r.value
+      tabStatus[name] = val
+    }
+  }
+  return tabStatus
+}
+
+app.get("/chrome-health", requireAuth, (req, res) => {
+  res.json({ ports: xTabHealthState, timestamp: Date.now() })
+})
+
+// ── Watchdog interval ──────────────────────────────────────────────────────
+let _lastSnapshotBroadcast = 0
+setInterval(async () => {
+  try {
+    const health = await chromeCdpHealth()
+    const now = Date.now()
+
+    // Check xTab URLs for alive ports
+    const xTabUrlResults = await xTabStatus()
+
+    for (const [portName, info] of Object.entries(health.ports)) {
+      const prev = xTabHealthState[portName] || {}
+      const wasAlive = prev.alive
+      const isAlive  = info.alive
+
+      // Merge URL info for xTab ports
+      const urlInfo = xTabUrlResults[portName] || {}
+      const url         = urlInfo.url        ?? prev.url        ?? null
+      const isSpace     = urlInfo.isSpace    ?? prev.isSpace    ?? false
+      const isLoginPage = urlInfo.isLoginPage ?? prev.isLoginPage ?? false
+
+      xTabHealthState[portName] = {
+        alive:       isAlive,
+        lastAliveAt: isAlive ? now : (prev.lastAliveAt || null),
+        url,
+        isSpace,
+        isLoginPage,
+        lastChecked: now,
+      }
+
+      // Emit state-change events only
+      if (wasAlive === true && !isAlive) {
+        const payload = { portName, alive: false, url: prev.url, reason: "CDP port unreachable" }
+        spaceNS.emit("xTabAlert", payload)
+        auditEntry(`watchdog: ${portName} DOWN (CDP unreachable)`)
+      } else if (wasAlive === false && isAlive) {
+        const payload = { portName, url }
+        spaceNS.emit("xTabRecovered", payload)
+        auditEntry(`watchdog: ${portName} recovered`)
+      }
+
+      // URL-level checks only for xTab ports that are alive
+      if (isAlive && (portName === "xTab1" || portName === "xTab2")) {
+        if (isLoginPage && !prev.isLoginPage) {
+          spaceNS.emit("xTabLoginExpired", { portName })
+          auditEntry(`watchdog: ${portName} showing login page — cookies may have expired`)
+        } else if (!isSpace && !isLoginPage && url && prev.isSpace === true) {
+          spaceNS.emit("xTabAlert", { portName, alive: true, url, reason: "navigated away from Space" })
+          auditEntry(`watchdog: ${portName} navigated away from Space (now: ${url})`)
+        }
+      }
+    }
+
+    // Periodic snapshot broadcast (every 5 min)
+    if (now - _lastSnapshotBroadcast > WATCHDOG_SNAPSHOT_INTERVAL_MS) {
+      _lastSnapshotBroadcast = now
+      spaceNS.emit("xTabHealthSnapshot", { ports: xTabHealthState, timestamp: now })
+    }
+  } catch (e) {
+    console.error("[watchdog] error:", e.message)
+  }
+}, WATCHDOG_INTERVAL_MS).unref?.()
+
 app.post("/kick/:agentId", requireAuth, (req, res) => {
   const agentId = parseInt(req.params.agentId)
   const target = spaceState.agents[agentId]
@@ -1183,6 +1331,7 @@ spaceNS.on("connection", (socket) => {
     turnQueue: spaceState.turnQueue
   })
   socket.emit("messageHistory", spaceState.messages.slice(-50))
+  socket.emit("xTabHealthSnapshot", { ports: xTabHealthState, timestamp: Date.now() })
 
   socket.on("agentConnect", ({ agentId }) => {
     if (spaceState.agents[agentId]) {

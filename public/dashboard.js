@@ -148,6 +148,7 @@
     exportCopy:   document.getElementById("export-copy"),
     exportTxt:    document.getElementById("export-txt"),
     exportJson:   document.getElementById("export-json"),
+    chromeHealth: document.getElementById("chrome-health"),
   }
 
   // ---------- state ----------
@@ -954,6 +955,46 @@
         })
       })
     })
+
+    // ---------- X tab watchdog events ----------
+    socket.on("xTabAlert", ({ portName, alive, url, reason }) => {
+      const ts = new Date().toLocaleTimeString()
+      const bannerId = `xtab-banner-${portName}`
+      const existing = document.getElementById(bannerId)
+      if (existing) existing.remove()
+      const banner = document.createElement("div")
+      banner.id = bannerId
+      banner.className = "x-tab-alert"
+      banner.innerHTML = `<span>X tab down: <strong>${portName}</strong> — ${reason || "unreachable"}${url ? ` (${url})` : ""} <span class="muted" style="font-weight:400;font-size:11px">${ts}</span></span><button class="banner-close" title="dismiss">×</button>`
+      banner.querySelector(".banner-close").addEventListener("click", () => banner.remove())
+      document.getElementById("xtab-banners").appendChild(banner)
+      auditEntry(`⚠ X tab alert: ${portName} — ${reason || "unreachable"}${url ? " — " + url : ""}`)
+    })
+
+    socket.on("xTabRecovered", ({ portName, url }) => {
+      const bannerId = `xtab-banner-${portName}`
+      const existing = document.getElementById(bannerId)
+      if (existing) existing.remove()
+      auditEntry(`✓ X tab recovered: ${portName}${url ? " — " + url : ""}`)
+    })
+
+    socket.on("xTabLoginExpired", ({ portName }) => {
+      const ts = new Date().toLocaleTimeString()
+      const bannerId = `xtab-login-${portName}`
+      const existing = document.getElementById(bannerId)
+      if (existing) existing.remove()
+      const banner = document.createElement("div")
+      banner.id = bannerId
+      banner.className = "x-tab-warn"
+      banner.innerHTML = `<span>X cookies expired on <strong>${portName}</strong> — re-export <code>auth_token</code> + <code>ct0</code> <span class="muted" style="font-weight:400;font-size:11px">${ts}</span></span><button class="banner-close" title="dismiss">×</button>`
+      banner.querySelector(".banner-close").addEventListener("click", () => banner.remove())
+      document.getElementById("xtab-banners").appendChild(banner)
+      auditEntry(`⚠ X cookies expired: ${portName}`)
+    })
+
+    socket.on("xTabHealthSnapshot", ({ ports, timestamp }) => {
+      renderChromeHealth(ports, timestamp)
+    })
   } // end wireSocket
 
   // ---------- inject ----------
@@ -998,6 +1039,10 @@
           const card = findCard(Number(id))
           if (card) { renderLatency(card, Number(id)); renderSparkline(card, Number(id)) }
         }
+      } catch (_) { /* non-fatal */ }
+      try {
+        const ch = await authedFetch("/chrome-health").then(r => r.json())
+        renderChromeHealth(ch.ports, ch.timestamp)
       } catch (_) { /* non-fatal */ }
       if (infoR.spaceUrl) {
         els.spaceLink.textContent = infoR.spaceTitle || infoR.spaceUrl
@@ -1134,6 +1179,30 @@
     parts.push(s + "s")
     return parts.join(" ")
   }
+  function fmtAgo(ts) {
+    if (!ts) return "never"
+    const s = Math.round((Date.now() - ts) / 1000)
+    if (s < 60)  return s + "s ago"
+    if (s < 3600) return Math.floor(s / 60) + "m ago"
+    return Math.floor(s / 3600) + "h ago"
+  }
+
+  function renderChromeHealth(ports, _timestamp) {
+    if (!els.chromeHealth) return
+    if (!ports || !Object.keys(ports).length) {
+      els.chromeHealth.textContent = "no data yet"
+      return
+    }
+    const lines = Object.entries(ports).map(([name, info]) => {
+      const dotCls = info.alive ? "alive" : "dead"
+      const seen   = info.alive ? `last seen ${fmtAgo(info.lastAliveAt)}` : `down since ${fmtAgo(info.lastAliveAt)}`
+      const urlStr = info.url ? ` — ${info.url.slice(0, 60)}` : ""
+      const tag    = info.isLoginPage ? " [login page]" : (info.isSpace ? " [✓ space]" : (info.url ? " [?]" : ""))
+      return `<span class="cdp-dot ${dotCls}"></span><strong>${name}</strong> ${seen}${urlStr}${tag}`
+    })
+    els.chromeHealth.innerHTML = lines.join("<br>")
+  }
+
   els.healthBtn.addEventListener("click", refreshHealth)
 
   // ---------- listen-all button ----------

@@ -39,6 +39,8 @@ import {
   OverrideSelectorBodySchema,
   CostQuerySchema,
 } from './schemas'
+import { createBillingRouter } from './routes/billing'
+import { createWebhookRouter } from './routes/webhooks'
 import { createMarketplaceRoutes } from './routes/marketplace'
 import { PersonalityLoader } from './personalities'
 import type { PersonalityWithMeta } from './personalities'
@@ -116,7 +118,7 @@ export function createServer(options: ServerOptions = {}): XSpaceServer {
   app.use(
     cors({
       origin: corsOrigins,
-      methods: ['GET', 'POST'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
       allowedHeaders: ['Content-Type', 'X-API-Key', 'Authorization'],
       credentials: true,
     }),
@@ -226,6 +228,9 @@ export function createServer(options: ServerOptions = {}): XSpaceServer {
       if (/\.html$/i.test(p)) res.setHeader('Cache-Control', 'no-store')
     },
   }))
+  // Stripe webhooks must receive the raw body BEFORE express.json() strips it.
+  app.use('/webhooks', createWebhookRouter())
+
   app.use(express.json())
 
   // -------------------------------------------------------------------------
@@ -462,6 +467,9 @@ export function createServer(options: ServerOptions = {}): XSpaceServer {
     emitLog('info', `Settings updated: ${updated.join(', ')}`)
     res.json({ success: true, updated })
   })
+
+  // --- Billing + subscription management ---
+  app.use('/api/billing', createBillingRouter())
 
   // --- Marketplace routes ---
   app.use(createMarketplaceRoutes())

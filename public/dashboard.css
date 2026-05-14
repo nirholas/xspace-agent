@@ -555,3 +555,29 @@ button.pulse-hop:hover { background: var(--bg); border-color: var(--accent); }
 }
 .spark-bar.warn { background: var(--warn); }
 .spark-bar.bad  { background: var(--bad); }
+
+/* ── X tab watchdog banners ──────────────────────────────────────────────── */
+#xtab-banners { display: flex; flex-direction: column; gap: 0; }
+.x-tab-alert {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px; font-size: 13px; font-weight: 500;
+  background: rgba(248,81,73,0.18); border-bottom: 1px solid rgba(248,81,73,0.4);
+  color: var(--bad);
+}
+.x-tab-warn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px; font-size: 13px; font-weight: 500;
+  background: rgba(210,153,34,0.18); border-bottom: 1px solid rgba(210,153,34,0.4);
+  color: var(--warn);
+}
+.x-tab-alert .banner-close,
+.x-tab-warn  .banner-close {
+  margin-left: auto; background: none; border: none;
+  color: inherit; cursor: pointer; font-size: 16px; opacity: 0.7; padding: 0 4px;
+}
+.x-tab-alert .banner-close:hover,
+.x-tab-warn  .banner-close:hover { opacity: 1; }
+/* Chrome CDP health dots */
+.cdp-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+.cdp-dot.alive { background: var(--good); box-shadow: 0 0 4px var(--good); }
+.cdp-dot.dead  { background: var(--bad);  box-shadow: 0 0 4px var(--bad); }

@@ -1,0 +1,20 @@
+# terraform.tfvars.example
+# Copy to terraform.tfvars and fill in real values.
+# terraform.tfvars is gitignored — never commit it.
+
+project_id = "aerial-vehicle-466722-p5"
+region     = "us-central1"
+zone       = "us-central1-a"
+
+# Restrict this to your actual operator IPs in production.
+# Format: list of CIDR strings.
+# Example: ["203.0.113.42/32", "198.51.100.0/24"]
+operator_ips = ["0.0.0.0/0"]
+
+# Email for Cloud Monitoring alert notifications
+alert_email = "your-email@example.com"
+
+# Public SSH key for the "agent" OS user on the VM.
+# Generate with: ssh-keygen -t ed25519 -C "swarm-agent" -f ~/.ssh/swarm_agent
+# Then paste the contents of ~/.ssh/swarm_agent.pub here.
+ssh_public_key = "ssh-ed25519 AAAA...your-public-key-here... swarm-agent"
