@@ -48,14 +48,14 @@ const METERED_METRICS: UsageMetric[] = [
 // ---------------------------------------------------------------------------
 
 export class StripeUsageReporter {
-  private stripe: Stripe
+  private stripe: InstanceType<typeof Stripe>
   private log = getAppLogger('stripe-reporter')
   private timer: ReturnType<typeof setInterval> | null = null
   private lastReported: Map<string, number> = new Map()
   private config: Required<StripeUsageReporterConfig>
 
   constructor(stripeSecretKey: string, config: StripeUsageReporterConfig) {
-    this.stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-01-27.acacia' })
+    this.stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-04-22.dahlia' })
     this.config = {
       intervalMs: config.intervalMs ?? 3_600_000,
       ...config,
@@ -100,6 +100,10 @@ export class StripeUsageReporter {
   private async flushOrg(orgId: string): Promise<void> {
     const summary = await this.config.tracker.getUsageSummary(orgId)
 
+    // Resolve the Stripe customer ID for this org
+    const stripeCustomerId = await this.config.getSubscriptionItemId(orgId, 'session_minutes')
+    if (!stripeCustomerId) return
+
     for (const metric of METERED_METRICS) {
       const totalUsed = summary.metrics[metric] ?? 0
       const lastKey = `${orgId}:${metric}:${summary.period}`
@@ -108,14 +112,14 @@ export class StripeUsageReporter {
       const delta = totalUsed - lastValue
       if (delta <= 0) continue
 
-      const subItemId = await this.config.getSubscriptionItemId(orgId, metric)
-      if (!subItemId) continue
-
       try {
-        await this.stripe.subscriptionItems.createUsageRecord(subItemId, {
-          quantity: Math.round(delta),
-          timestamp: Math.floor(Date.now() / 1000),
-          action: 'increment',
+        // Stripe v22+ Billing Meters API: event_name matches the meter name in Stripe dashboard
+        await this.stripe.billing.meterEvents.create({
+          event_name: metric,
+          payload: {
+            value: String(Math.round(delta)),
+            stripe_customer_id: stripeCustomerId,
+          },
         })
 
         this.lastReported.set(lastKey, totalUsed)

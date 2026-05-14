@@ -449,9 +449,6 @@ importers:
 
   packages/server:
     dependencies:
-      '@types/stripe':
-        specifier: ^8.0.417
-        version: 8.0.417(@types/node@20.19.37)
       cors:
         specifier: ^2.8.5
         version: 2.8.6
@@ -2924,10 +2921,6 @@ packages:
 
   '@types/speakeasy@2.0.10':
     resolution: {integrity: sha512-QVRlDW5r4yl7p7xkNIbAIC/JtyOcClDIIdKfuG7PWdDT1MmyhtXSANsildohy0K+Lmvf/9RUtLbNLMacvrVwxA==}
-
-  '@types/stripe@8.0.417':
-    resolution: {integrity: sha512-PTuqskh9YKNENnOHGVJBm4sM0zE8B1jZw1JIskuGAPkMB+OH236QeN8scclhYGPA4nG6zTtPXgwpXdp+HPDTVw==}
-    deprecated: This is a stub types definition. stripe provides its own type definitions, so you do not need this installed.
 
   '@types/superagent@8.1.9':
     resolution: {integrity: sha512-pTVjI73witn+9ILmoJdajHGW2jkSaOzhiFYF1Rd3EQ94kymLqB9PjD9ISg7WaALC7+dCHT0FGe9T2LktLq/3GQ==}
@@ -10747,12 +10740,6 @@ snapshots:
   '@types/speakeasy@2.0.10':
     dependencies:
       '@types/node': 25.5.0
-
-  '@types/stripe@8.0.417(@types/node@20.19.37)':
-    dependencies:
-      stripe: 22.1.1(@types/node@20.19.37)
-    transitivePeerDependencies:
-      - '@types/node'
 
   '@types/superagent@8.1.9':
     dependencies:

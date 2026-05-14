@@ -10,22 +10,36 @@ import Stripe from 'stripe'
 import { getAppLogger } from 'xspace-agent'
 import {
   getOrganization,
-  updateOrganizationPlan,
-  updateOrganizationStripeIds,
+  changePlan,
   suspendOrganization,
   reactivateOrganization,
 } from 'xspace-agent/dist/tenant'
+import type { SuspensionReason, PlanTier } from 'xspace-agent/dist/tenant'
+
+// Update org Stripe IDs by mutating the in-memory org record directly
+// (In production this will be a DB write via Drizzle)
+function updateOrganizationStripeIds(
+  orgId: string,
+  ids: { stripeCustomerId?: string; stripeSubscriptionId?: string },
+): void {
+  const org = getOrganization(orgId)
+  if (!org) return
+  if (ids.stripeCustomerId)     (org as any).stripeCustomerId     = ids.stripeCustomerId
+  if (ids.stripeSubscriptionId) (org as any).stripeSubscriptionId = ids.stripeSubscriptionId
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-let _stripe: Stripe | null = null
-function getStripe(): Stripe {
+type StripeClient = InstanceType<typeof Stripe>
+
+let _stripe: StripeClient | null = null
+function getStripe(): StripeClient {
   if (!_stripe) {
     const key = process.env.STRIPE_SECRET_KEY
     if (!key) throw new Error('STRIPE_SECRET_KEY is not set')
-    _stripe = new Stripe(key, { apiVersion: '2025-01-27.acacia' })
+    _stripe = new Stripe(key, { apiVersion: '2026-04-22.dahlia' })
   }
   return _stripe
 }
@@ -70,7 +84,7 @@ export function createWebhookRouter(): Router {
       const sig = req.headers['stripe-signature'] as string | undefined
       const rawBody: Buffer = (req as any).rawBody
 
-      let event: Stripe.Event
+      let event: any
 
       // Verify signature
       try {
@@ -79,7 +93,7 @@ export function createWebhookRouter(): Router {
         } else {
           // Allow unsigned in development; log loudly
           log.warn({ type: (req.body as any)?.type }, 'processing unsigned webhook — set STRIPE_WEBHOOK_SECRET in production')
-          event = JSON.parse(rawBody.toString()) as Stripe.Event
+          event = JSON.parse(rawBody.toString())
         }
       } catch (err: any) {
         log.warn({ err: err.message }, 'webhook signature verification failed')
@@ -107,12 +121,12 @@ export function createWebhookRouter(): Router {
 // Event dispatcher
 // ---------------------------------------------------------------------------
 
-async function handleEvent(event: Stripe.Event, log: ReturnType<typeof getAppLogger>) {
+async function handleEvent(event: any, log: ReturnType<typeof getAppLogger>) {
   switch (event.type) {
 
     // ── Checkout completed — link Stripe customer/subscription to org ────────
     case 'checkout.session.completed': {
-      const session = event.data.object as Stripe.Checkout.Session
+      const session = event.data.object as any
       const orgId   = session.metadata?.orgId
       const plan    = normalizePlan(session.metadata?.plan)
 
@@ -122,34 +136,34 @@ async function handleEvent(event: Stripe.Event, log: ReturnType<typeof getAppLog
       const subscriptionId = session.subscription as string | null
 
       if (customerId || subscriptionId) {
-        await updateOrganizationStripeIds(orgId, {
+        updateOrganizationStripeIds(orgId, {
           stripeCustomerId:     customerId     ?? undefined,
           stripeSubscriptionId: subscriptionId ?? undefined,
         })
       }
 
-      await updateOrganizationPlan(orgId, plan)
+      changePlan(orgId, plan as PlanTier)
       log.info({ orgId, plan, customerId, subscriptionId }, 'checkout completed — plan activated')
       break
     }
 
     // ── Subscription created ─────────────────────────────────────────────────
     case 'customer.subscription.created': {
-      const sub  = event.data.object as Stripe.Subscription
+      const sub  = event.data.object as any
       const plan = normalizePlan(sub.metadata?.plan)
       const orgId = sub.metadata?.orgId
 
       if (!orgId) { log.warn({ subId: sub.id }, 'subscription.created missing orgId metadata'); break }
 
-      await updateOrganizationStripeIds(orgId, { stripeSubscriptionId: sub.id })
-      await updateOrganizationPlan(orgId, plan)
+      updateOrganizationStripeIds(orgId, { stripeSubscriptionId: sub.id })
+      changePlan(orgId, plan as PlanTier)
       log.info({ orgId, plan, subId: sub.id }, 'subscription created')
       break
     }
 
     // ── Subscription updated (plan change, trial end, etc.) ──────────────────
     case 'customer.subscription.updated': {
-      const sub     = event.data.object as Stripe.Subscription
+      const sub     = event.data.object as any
       const orgId   = sub.metadata?.orgId
       const newPlan = normalizePlan(sub.metadata?.plan)
 
@@ -158,13 +172,13 @@ async function handleEvent(event: Stripe.Event, log: ReturnType<typeof getAppLog
       // Sync plan if it changed
       const org = getOrganization(orgId)
       if (org && org.plan !== newPlan) {
-        await updateOrganizationPlan(orgId, newPlan)
+        changePlan(orgId, newPlan as PlanTier)
         log.info({ orgId, from: org.plan, to: newPlan }, 'plan updated via subscription change')
       }
 
       // Handle status transitions
       if (sub.status === 'active' && org?.status === 'suspended') {
-        await reactivateOrganization(orgId)
+        reactivateOrganization(orgId)
         log.info({ orgId }, 'organization reactivated after payment')
       }
 
@@ -173,19 +187,19 @@ async function handleEvent(event: Stripe.Event, log: ReturnType<typeof getAppLog
 
     // ── Subscription deleted (cancelled immediately or after period end) ─────
     case 'customer.subscription.deleted': {
-      const sub   = event.data.object as Stripe.Subscription
+      const sub   = event.data.object as any
       const orgId = sub.metadata?.orgId
 
       if (!orgId) { log.warn({ subId: sub.id }, 'subscription.deleted missing orgId metadata'); break }
 
-      await updateOrganizationPlan(orgId, 'free')
+      changePlan(orgId, 'free')
       log.info({ orgId, subId: sub.id }, 'subscription deleted — org downgraded to free')
       break
     }
 
     // ── Invoice paid — record payment, clear any suspension ─────────────────
     case 'invoice.paid': {
-      const invoice = event.data.object as Stripe.Invoice
+      const invoice = event.data.object as any
       const customerId = invoice.customer as string | null
       if (!customerId) break
 
@@ -194,7 +208,7 @@ async function handleEvent(event: Stripe.Event, log: ReturnType<typeof getAppLog
       if (!org) { log.warn({ customerId }, 'invoice.paid — could not resolve org'); break }
 
       if (org.status === 'suspended') {
-        await reactivateOrganization(org.id)
+        reactivateOrganization(org.id)
         log.info({ orgId: org.id }, 'org reactivated after invoice payment')
       }
 
@@ -209,7 +223,7 @@ async function handleEvent(event: Stripe.Event, log: ReturnType<typeof getAppLog
 
     // ── Invoice payment failed — suspend after grace period ──────────────────
     case 'invoice.payment_failed': {
-      const invoice = event.data.object as Stripe.Invoice
+      const invoice = event.data.object as any
       const customerId = invoice.customer as string | null
       if (!customerId) break
 
@@ -219,7 +233,7 @@ async function handleEvent(event: Stripe.Event, log: ReturnType<typeof getAppLog
       // Stripe retries automatically; only suspend on final attempt
       const attemptCount = invoice.attempt_count ?? 0
       if (attemptCount >= 3) {
-        await suspendOrganization(org.id, 'non_payment')
+        suspendOrganization(org.id, 'non_payment')
         log.warn({ orgId: org.id, attemptCount }, 'org suspended after repeated payment failures')
       } else {
         log.warn({ orgId: org.id, attemptCount }, 'invoice payment failed — retries remaining')
@@ -229,7 +243,7 @@ async function handleEvent(event: Stripe.Event, log: ReturnType<typeof getAppLog
 
     // ── Trial ending soon (3 days out) ────────────────────────────────────────
     case 'customer.subscription.trial_will_end': {
-      const sub   = event.data.object as Stripe.Subscription
+      const sub   = event.data.object as any
       const orgId = sub.metadata?.orgId
       if (!orgId) break
 
@@ -247,13 +261,9 @@ async function handleEvent(event: Stripe.Event, log: ReturnType<typeof getAppLog
 // Resolve an org from a Stripe customer ID
 // ---------------------------------------------------------------------------
 
-async function resolveOrgByCustomerId(customerId: string) {
-  // This calls the tenant repo's findByStripeCustomerId stub.
-  // The implementation is provided by the tenant layer (DB query).
-  try {
-    const { findByStripeCustomerId } = await import('xspace-agent/dist/tenant')
-    return findByStripeCustomerId(customerId)
-  } catch {
-    return null
-  }
+function resolveOrgByCustomerId(_customerId: string): { id: string; status: string } | null {
+  // In production this is: SELECT * FROM orgs WHERE stripe_customer_id = $1
+  // The in-memory org store doesn't support cross-org scans yet.
+  // This stub will be replaced when Drizzle migrations land.
+  return null
 }

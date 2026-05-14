@@ -13,13 +13,15 @@ import { getAppLogger } from 'xspace-agent'
 // Stripe client (lazy — only initialised when STRIPE_SECRET_KEY is present)
 // ---------------------------------------------------------------------------
 
-let _stripe: Stripe | null = null
+type StripeClient = InstanceType<typeof Stripe>
 
-function getStripe(): Stripe {
+let _stripe: StripeClient | null = null
+
+function getStripe(): StripeClient {
   if (!_stripe) {
     const key = process.env.STRIPE_SECRET_KEY
     if (!key) throw new Error('STRIPE_SECRET_KEY is not set')
-    _stripe = new Stripe(key, { apiVersion: '2025-01-27.acacia' })
+    _stripe = new Stripe(key, { apiVersion: '2026-04-22.dahlia' })
   }
   return _stripe
 }
@@ -76,7 +78,7 @@ export function createBillingRouter(): Router {
         expand: ['data.default_payment_method', 'data.latest_invoice'],
       })
 
-      const sub = subscriptions.data[0]
+      const sub = subscriptions.data[0] as any
       if (!sub) {
         res.json({ status: 'none', plan: tenant.plan.tier })
         return
@@ -86,11 +88,11 @@ export function createBillingRouter(): Router {
         id: sub.id,
         status: sub.status,
         plan: tenant.plan.tier,
-        currentPeriodStart: new Date((sub as any).current_period_start * 1000).toISOString(),
-        currentPeriodEnd:   new Date((sub as any).current_period_end   * 1000).toISOString(),
+        currentPeriodStart: new Date(sub.current_period_start * 1000).toISOString(),
+        currentPeriodEnd:   new Date(sub.current_period_end   * 1000).toISOString(),
         cancelAtPeriodEnd:  sub.cancel_at_period_end,
         cancelAt: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
-        trialEnd: (sub as any).trial_end ? new Date((sub as any).trial_end * 1000).toISOString() : null,
+        trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
         defaultPaymentMethod: sub.default_payment_method,
         latestInvoice: sub.latest_invoice,
       })
@@ -133,7 +135,7 @@ export function createBillingRouter(): Router {
 
     try {
       const stripe = getStripe()
-      const sessionParams: Stripe.Checkout.SessionCreateParams = {
+      const sessionParams: Parameters<StripeClient['checkout']['sessions']['create']>[0] = {
         mode: 'subscription',
         payment_method_types: ['card'],
         line_items: [
@@ -275,7 +277,7 @@ export function createBillingRouter(): Router {
         return
       }
 
-      let result: Stripe.Subscription
+      let result: any
       if (immediately) {
         result = await stripe.subscriptions.cancel(sub.id)
       } else {
@@ -334,7 +336,7 @@ export function createBillingRouter(): Router {
       }
 
       // Find the base plan item (non-metered)
-      const baseItem = (sub.items.data as Stripe.SubscriptionItem[]).find(
+      const baseItem = (sub.items.data as any[]).find(
         (item) => !(item.price as any).recurring?.usage_type || (item.price as any).recurring.usage_type === 'licensed',
       )
       if (!baseItem) {
@@ -377,11 +379,11 @@ export function createBillingRouter(): Router {
         type: 'card',
       })
 
-      const customer = await stripe.customers.retrieve(stripeCustomerId) as Stripe.Customer
+      const customer = await stripe.customers.retrieve(stripeCustomerId) as any
       const defaultMethodId = (customer.invoice_settings?.default_payment_method as string) ?? null
 
       res.json({
-        paymentMethods: methods.data.map((pm) => ({
+        paymentMethods: methods.data.map((pm: any) => ({
           id: pm.id,
           brand: pm.card?.brand,
           last4: pm.card?.last4,
@@ -425,28 +427,14 @@ export function createBillingRouter(): Router {
 
     try {
       const stripe = getStripe()
-      const subscriptions = await stripe.subscriptions.list({
-        customer: stripeCustomerId,
-        status: 'active',
-        limit: 1,
-        expand: ['data.items'],
-      })
-
-      const sub = subscriptions.data[0]
-      if (!sub) { res.status(404).json({ error: 'No active subscription' }); return }
-
-      const meteredItem = (sub.items.data as Stripe.SubscriptionItem[]).find(
-        (item) => item.price.id === meterId,
-      )
-      if (!meteredItem) {
-        res.status(404).json({ error: `No metered item for ${metric} in subscription` })
-        return
-      }
-
-      await stripe.subscriptionItems.createUsageRecord(meteredItem.id, {
-        quantity: Math.round(quantity),
-        timestamp: Math.floor(Date.now() / 1000),
-        action: 'increment',
+      // Stripe v22+ uses Billing Meter events instead of subscriptionItem usage records.
+      // event_name is the meter name configured in the Stripe dashboard.
+      await stripe.billing.meterEvents.create({
+        event_name: metric,
+        payload: {
+          value: String(Math.round(quantity)),
+          stripe_customer_id: stripeCustomerId,
+        },
       })
 
       log.info({ orgId: tenant.orgId, metric, quantity }, 'usage reported to Stripe')

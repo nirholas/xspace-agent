@@ -18,3 +18,23 @@ alert_email = "your-email@example.com"
 # Generate with: ssh-keygen -t ed25519 -C "swarm-agent" -f ~/.ssh/swarm_agent
 # Then paste the contents of ~/.ssh/swarm_agent.pub here.
 ssh_public_key = "ssh-ed25519 AAAA...your-public-key-here... swarm-agent"
+
+# ── Cloud Run / SaaS ─────────────────────────────────────────────────────────
+
+# Custom domain for the Cloud Run service
+app_domain = "app.xspaceagent.com"
+
+# ── After first `terraform apply`, populate secrets with: ──────────────────
+#
+#   gcloud secrets versions add stripe-secret-key     --data-file=<(echo -n "$STRIPE_SECRET_KEY")
+#   gcloud secrets versions add stripe-webhook-secret --data-file=<(echo -n "$STRIPE_WEBHOOK_SECRET")
+#   gcloud secrets versions add admin-api-key         --data-file=<(echo -n "$(openssl rand -hex 32)")
+#   gcloud secrets versions add openai-api-key        --data-file=<(echo -n "$OPENAI_API_KEY")
+#   gcloud secrets versions add anthropic-api-key     --data-file=<(echo -n "$ANTHROPIC_API_KEY")
+#   gcloud secrets versions add groq-api-key          --data-file=<(echo -n "$GROQ_API_KEY")
+#   gcloud secrets versions add elevenlabs-api-key    --data-file=<(echo -n "$ELEVENLABS_API_KEY")
+#   gcloud secrets versions add x-auth-token          --data-file=<(echo -n "$X_AUTH_TOKEN")
+#   gcloud secrets versions add x-ct0                 --data-file=<(echo -n "$X_CT0")
+#   gcloud secrets versions add stripe-price-developer --data-file=<(echo -n "$STRIPE_PRICE_DEVELOPER")
+#   gcloud secrets versions add stripe-price-pro      --data-file=<(echo -n "$STRIPE_PRICE_PRO")
+#   gcloud secrets versions add stripe-price-business --data-file=<(echo -n "$STRIPE_PRICE_BUSINESS")
