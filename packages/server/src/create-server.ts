@@ -40,6 +40,7 @@ import {
   CostQuerySchema,
 } from './schemas'
 import { createBillingRouter } from './routes/billing'
+import { createAskRouter } from './routes/ask'
 import { createWebhookRouter } from './routes/webhooks'
 import { createMarketplaceRoutes } from './routes/marketplace'
 import { PersonalityLoader } from './personalities'
@@ -119,7 +120,8 @@ export function createServer(options: ServerOptions = {}): XSpaceServer {
     cors({
       origin: corsOrigins,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-      allowedHeaders: ['Content-Type', 'X-API-Key', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'X-API-Key', 'Authorization', 'X-Payment', 'X-PAYMENT'],
+      exposedHeaders: ['X-Payment-Response'],
       credentials: true,
     }),
   )
@@ -470,6 +472,9 @@ export function createServer(options: ServerOptions = {}): XSpaceServer {
 
   // --- Billing + subscription management ---
   app.use('/api/billing', createBillingRouter())
+
+  // --- x402 pay-per-question endpoint (Solana + EVM micropayments) ---
+  app.use('/api/ask', createAskRouter({ state, io }))
 
   // --- Marketplace routes ---
   app.use(createMarketplaceRoutes())
